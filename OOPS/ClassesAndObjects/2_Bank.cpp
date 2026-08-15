@@ -22,7 +22,7 @@ public:
 
     bool withdraw(double amount)
     {
-        if (_balance - amount >= 0)
+        if ((_balance > 0 ) && (_balance - amount) >= 0)
         {
             _balance -= amount;
             return true;

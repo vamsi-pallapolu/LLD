@@ -95,15 +95,53 @@ const auto &brand() const { return _brand; }
 
 If you returned by value (`std::string brand() const`), each call would copy the string. Note the `const` on the return type is technically redundant here — because the method itself is `const`, `this` is `const Car *` and `auto &` already deduces to `const std::string &`. The redundancy becomes protection if you later drop the trailing `const` on the method: without the return-type `const`, a caller could then write `ob.brand() = "X";` and mutate the private field.
 
+## Four flavors of a reference-returning getter
+
+`1_Classe.cpp` shows all four combinations of "`const` on the return type" × "`const` on the method" for the `color()` getter. Each has different implications for what the caller can do and what contexts the method can be called from.
+
+```cpp
+// (1) non-const return, non-const method
+auto &color() { return _color; }
+
+// (2) non-const return, const method
+auto &color() const { return _color; }         // still returns const& because *this is const
+
+// (3) const return, non-const method
+const auto &color() { return _color; }
+
+// (4) const return, const method
+const auto &color() const { return _color; }
+```
+
+| Flavor | Callable on `const Car`? | Caller can read? | Caller can mutate through the reference? | Notes |
+| --- | --- | --- | --- | --- |
+| (1) `auto& color()` | No | Yes | Yes — `ob.color().append("Blue");` compiles and mutates `_color` | Full read/write handle — breaks encapsulation |
+| (2) `auto& color() const` | Yes | Yes | No — inside a `const` method, `_color` is `const std::string`, so `auto&` deduces to `const std::string&` | This is what `Car.h` actually declares |
+| (3) `const auto& color()` | No | Yes | No | Rare; usually you also want `const` on the method |
+| (4) `const auto& color() const` | Yes | Yes | No | The standard "read-only getter" — same as `brand()`/`model()` |
+
+`1_Classe.cpp` uses flavor (1), which is why the `main` below can mutate the color through the returned reference:
+
+```cpp
+Car ob("Toyota", "Hilux", "Red");
+std::string color = ob.color();     // copy — always valid, regardless of return-type constness
+ob.color().append("Blue");          // mutates _color in place; only compiles under flavor (1)
+```
+
+Contrast with `Car.h`, which declares flavor (2) (`auto &color() const`). The line `ob.color().append("Blue");` would **not** compile against the header version — `.append` is a non-const member of `std::string` and the reference is `const std::string&`.
+
+> Header/impl divergence: `Car.h` and `1_Classe.cpp` currently disagree on the signature of `color()`. In a real project, only one definition should exist and both translation units should agree on it.
+
 ## `displayStatus` — a `const` output method
 
 ```cpp
 void displayStatus() const {
-    std::cout << "brand " << _brand << " is running at " << _speed << "km/hr";
+    std::cout << "brand " << _color << _brand
+              << " is running at " << _speed << "km/hr" << std::endl;
 }
 ```
 
-Reads state, doesn't modify it → `const`. `std::cout` is the standard output stream from `<iostream>`; `<<` is the stream-insertion operator.
+Reads state, doesn't modify it → `const`. `std::cout` is the standard output stream from `<iostream>`; `<<` is the stream-insertion operator; `std::endl` writes `'\n'` and flushes the buffer (prefer `'\n'` alone when you don't need the flush — flushing in a loop is a common perf pitfall).
 
 ## Common patterns for a class definition
 

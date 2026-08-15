@@ -20,7 +20,7 @@ public:
     int         speed() const { return _speed; }
     const auto &brand() const { return _brand; }
     const auto &model() const { return _model; }
-    const auto &color() const { return _color; }
+    auto &color() const { return _color; }
 
     void displayStatus() const {
         std::cout << "brand " << _brand << " is running at " << _speed << "km/hr";
