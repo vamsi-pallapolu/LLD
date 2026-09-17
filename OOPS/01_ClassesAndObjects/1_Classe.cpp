@@ -1,3 +1,9 @@
+/*
+
+Contains example of class and object in C++.
+
+*/
+
 #include <iostream>
 #include <string>
 
@@ -13,7 +19,7 @@ public:
         : _brand{brand}, _model{model}, _color{color} {}
 
     void increment(int inc)  { _speed += inc; }
-    void brake(int dec)      { _speed = _speed > dec ? _speed - dec : 0; }
+    void brake(int dec)      { _speed = _speed > dec ? _speed - dec : 0; }-367 ¨§¢8-l
 
 
     int         speed() const { return _speed; }
