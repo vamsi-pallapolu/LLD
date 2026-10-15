@@ -1,0 +1,8 @@
+Teach me <TOPIC> in C++ so I clearly understand its *intent* (why it exists and what problem it solves), not just the syntax.
+
+- Research it online, use reputable sources (e.g., Wikipedia, C++ Core Guidelines, Martin Fowler), and cite them with links at the end.
+- Don't reuse any examples from this project. Write fresh, simple, real-world examples.
+- In Markdown files under resources/, use standard textbook-style definitions with accurate technical terminology. Follow each formal definition with a plain-language explanation, and keep terminology consistent throughout the notes.
+- Use plain, simple language and make explanations easy to understand on their own. Avoid complex terminology and unnecessary jargon. When a technical term or C++ keyword is needed, explain it in everyday words where it first appears. Walk through code step by step without assuming I already know the concept.
+- Structure: a one-line definition → a real-world analogy → a bad vs. good code comparison → the key intents → common mistakes → a short design checklist → a self-test with hidden answers → a TL;DR.
+- Save it as a Markdown file in resources/OOPS/, numbered after the existing notes.
