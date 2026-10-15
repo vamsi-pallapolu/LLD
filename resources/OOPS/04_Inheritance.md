@@ -1,53 +1,72 @@
 # Inheritance: Build a Specific Type from a General One
 
-**Inheritance is an object-oriented mechanism by which a derived class acquires the members of a base class and may extend or specialize its behavior.**
+**Inheritance is an object-oriented mechanism by which a derived class acquires the members of a base class and may extend or specialize its behavior** [1].
 
-In simple words, a new class can reuse features of an existing class and add features of its own.
+In simple words, a new class can reuse the data and functions of an existing class and add features of its own.
 
 ## 1. A real-world analogy: a dog is an animal
 
-All animals eat. A dog is an animal, so it also eats. A dog can additionally bark.
+Every animal has a name and can eat. A dog is an animal, so it also has a name and eats. A dog can additionally bark.
 
 We can express this using two classes:
 
-- `Animal` provides `eat()`.
-- `Dog` inherits `eat()` from `Animal` and adds `bark()`.
+- `Animal` stores a name and provides `eat()`.
+- `Dog` inherits both from `Animal` and adds `bark()`.
 
-**A base class is a class from which another class derives.** Here, `Animal` is the base class: it provides the common behavior.
+**A base class is a class from which another class derives.** Here, `Animal` is the base class: it provides the common data and behavior.
 
-**A derived class is a class that inherits from another class.** Here, `Dog` is the derived class: it reuses that behavior and adds its own.
+**A derived class is a class that inherits from another class.** Here, `Dog` is the derived class: it reuses what `Animal` provides and adds its own behavior.
 
-The relationship is **“a dog is an animal.”**
+The relationship is **"a dog is an animal."**
 
-## 2. Bad vs. good: writing the same behavior twice
+## 2. Bad vs. good: writing the same thing twice
 
 ### Without inheritance
 
-These classes each contain the same `eat()` function:
+These two classes repeat the same name storage and the same `eat()` function:
 
 ```cpp
 #include <iostream>
+#include <string>
 
 class Animal {
 public:
+    explicit Animal(const std::string& name) : name_(name) {}
+
     void eat() const {
-        std::cout << "Eating food\n";
+        std::cout << name_ << " is eating\n";
     }
+
+private:
+    std::string name_;
 };
 
 class Dog {
 public:
+    explicit Dog(const std::string& name) : name_(name) {}
+
     void eat() const {
-        std::cout << "Eating food\n";
+        std::cout << name_ << " is eating\n";
     }
 
     void bark() const {
-        std::cout << "Woof!\n";
+        std::cout << name_ << " says Woof!\n";
     }
+
+private:
+    std::string name_;
 };
 
+void feed(const Animal& animal) {
+    animal.eat();
+}
+
 int main() {
-    Dog dog;
+    Animal parrot("Polly");
+    Dog dog("Rex");
+
+    feed(parrot);
+    // feed(dog); // Error: a Dog is not an Animal to the compiler.
     dog.eat();
     dog.bark();
 }
@@ -56,154 +75,171 @@ int main() {
 Output:
 
 ```text
-Eating food
-Woof!
+Polly is eating
+Rex is eating
+Rex says Woof!
 ```
 
-This works, but `eat()` is written twice. If its shared behavior changes, both copies need updating. C++ also treats these as unrelated classes, even though the real-world concepts are related.
+There are two problems:
 
-Repeated code alone is not enough reason to use inheritance. Here, inheritance also represents a meaningful relationship: a dog is a kind of animal [1].
+1. **The code is duplicated.** The name, the constructor and `eat()` are written twice. If eating changes, both copies must be updated, and it is easy to forget one.
+2. **C++ does not know a dog is an animal.** `feed()` accepts an `Animal`, but `feed(dog)` does not compile. The two classes merely look alike; to the compiler they are unrelated.
+
+Repeated code alone is not enough reason to use inheritance. Here, there is also a real "is-a" relationship: a dog is a kind of animal [2].
 
 ### With inheritance
 
-Write `eat()` once in `Animal`, then let `Dog` inherit it:
+Write the shared parts once in `Animal`, then let `Dog` inherit them:
 
 ```cpp
 #include <iostream>
+#include <string>
 
 class Animal {
 public:
-    void eat() const {
-        std::cout << "Eating food\n";
+    explicit Animal(const std::string& name) : name_(name) {}
+
+    std::string name() const {
+        return name_;
     }
+
+    void eat() const {
+        std::cout << name_ << " is eating\n";
+    }
+
+private:
+    std::string name_;
 };
 
 class Dog : public Animal {
 public:
+    explicit Dog(const std::string& name) : Animal(name) {}
+
     void bark() const {
-        std::cout << "Woof!\n";
+        std::cout << name() << " says Woof!\n";
     }
 };
 
+void feed(const Animal& animal) {
+    animal.eat();
+}
+
 int main() {
-    Dog dog;
-    dog.eat();  // Inherited from Animal.
-    dog.bark(); // Defined in Dog.
+    Animal parrot("Polly");
+    Dog dog("Rex");
+
+    feed(parrot);
+    feed(dog);  // Works: a Dog is an Animal.
+    dog.bark();
 }
 ```
 
 Output:
 
 ```text
-Eating food
-Woof!
+Polly is eating
+Rex is eating
+Rex says Woof!
 ```
 
-`Dog` has no separate definition of `eat()`. It uses the function inherited from `Animal`.
+`Dog` no longer stores its own name or defines its own `eat()`. It uses the ones inherited from `Animal`, and `feed(dog)` now compiles.
 
-### Read the important line
+### Read the syntax
 
-```cpp
-class Dog : public Animal
-```
+| Code | Plain meaning |
+|------|---------------|
+| `class Dog : public Animal` | `Dog` is a kind of `Animal`. It gets `Animal`'s members, and code expecting an `Animal&` can accept a `Dog` |
+| `explicit Animal(const std::string& name)` | The constructor: it runs when an animal is created. `explicit` stops C++ from silently turning a string into an animal |
+| `: name_(name)` | Give the stored name its starting value |
+| `: Animal(name)` | In `Dog`'s constructor: build the animal part first, passing it the name |
+| `const std::string&` | Use the caller's text without copying it and without changing it |
+| `const` after a function, as in `eat() const` | This function only reads the object; it promises not to change its data |
+| `private:` | Only `Animal`'s own functions can use `name_`. `Dog` cannot either |
+| `const Animal& animal` | `feed()` works with the caller's existing animal, without copying it or changing it |
 
-Read this as: **“Dog publicly inherits from Animal.”**
-
-| Code | Meaning |
-|------|---------|
-| `class Animal` | Define the base class |
-| `class Dog : public Animal` | Define `Dog` as a derived class of `Animal` |
-| `public:` inside a class | Allow outside code to use the following members |
-| `void` | The function returns no value |
-| `const` after a function | The function cannot change ordinary object data through `this` |
-| `Dog dog;` | Create a `Dog` object named `dog` |
-| `dog.eat()` | Call the function inherited from `Animal` |
-| `dog.bark()` | Call the function defined in `Dog` |
+A **reference**, written with `&`, is another name for an existing object. `feed()` does not get its own copy; it uses the very animal you passed in.
 
 ### Walk through the program
 
-1. `Animal` defines the common action, `eat()`.
-2. `Dog` inherits from `Animal`, so its objects can use that action.
-3. `Dog` adds another action, `bark()`.
-4. `Dog dog;` creates one dog object.
-5. `dog.eat()` runs `Animal`'s function and prints `Eating food`.
-6. `dog.bark()` runs `Dog`'s function and prints `Woof!`.
+1. `Animal parrot("Polly")` creates an ordinary animal named Polly.
+2. `Dog dog("Rex")` starts creating a dog. Its constructor first runs `Animal(name)`, which builds the **animal part** of the dog and stores `"Rex"`.
+3. The `Dog` constructor then finishes. The dog has no extra data, so there is nothing more to set up.
+4. `feed(parrot)` calls `eat()` and prints `Polly is eating`.
+5. `feed(dog)` passes the dog where an `Animal&` is expected. That is allowed because a `Dog` is an `Animal`. It prints `Rex is eating`.
+6. `dog.bark()` runs `Dog`'s own function. `Dog` cannot read `name_` directly because it is private, so it calls the public `name()` function instead.
 
-You do not need to create a separate `Animal` object for the dog to use `eat()`.
+**A base-class subobject is the part of a derived object corresponding to one of its base classes.** In plain language, every `Dog` contains a complete `Animal` built inside it. That inner animal holds the name. It belongs only to this dog; Rex does not share it with Polly.
 
 Inheritance works in one direction. A dog can use animal behavior, but an ordinary `Animal` object does not gain `bark()` from `Dog`.
 
 ## 3. The key intents
 
-### Express an “is-a” relationship
+### Express an "is-a" relationship
 
-A dog is an animal. Public inheritance lets code use a dog where an animal reference or pointer is expected.
+A dog is an animal. Public inheritance tells the compiler so, which is why `feed(dog)` works. `feed()` only needs the `Animal` operations; it does not need to know the object is a dog.
 
-For example, add this function before `main()` in the good program:
+**The Liskov Substitution Principle states that objects of a subtype should be usable in place of objects of their supertype without violating the properties expected by clients** [3]. In plain language, anywhere an animal works, a dog must work too, and keep every promise an animal makes. If `Animal` promises that `eat()` never fails, a `Dog` must not break that.
 
-```cpp
-void feed(const Animal& animal) {
-    animal.eat();
-}
-```
+### Reuse common data and behavior
 
-Then add this line inside `main()`, after creating `dog`:
-
-```cpp
-feed(dog); // Prints: Eating food
-```
-
-A **reference** is an alias for an existing object. Here, `const Animal&` lets `feed()` use the existing dog's animal part without copying it or changing it through the reference.
-
-`feed()` only needs the `Animal` operations. It does not need to know that the object is a dog.
-
-A derived type should preserve the promises of its base type. If code can feed an animal, using a dog should still work correctly. This is the idea behind the **Liskov Substitution Principle**: objects of a subtype should be usable in place of objects of their supertype without violating the properties expected by clients.
-
-### Reuse common behavior
-
-`eat()` is defined once in `Animal`. `Dog` reuses it. Another suitable animal class could reuse it too.
-
-If the shared eating behavior changes, its implementation has one place to change.
+The name and `eat()` are written once in `Animal`. `Dog` reuses them, and another animal class, such as `Cat`, could reuse them too. If eating changes, there is one place to change it.
 
 ### Add specific behavior
 
 `bark()` belongs to `Dog`. The base class does not need every action that every derived class might provide.
 
-A function receiving `const Animal&` can call `eat()`, but it cannot call `bark()` through that reference because `Animal` does not declare it.
+A function receiving `const Animal&` can call `eat()`, but it cannot call `bark()` through that reference, because not every animal can bark.
+
+### Keep each class responsible for its own rules
+
+`Animal` sets up and protects its own name, even inside a dog. `Dog` sets up only what it adds. Each class looks after its own data.
 
 ### Keep inheritance distinct from polymorphism
 
-This example shares an existing function. It does not choose between different implementations of `eat()` at runtime.
-
-That additional behavior requires virtual functions in this kind of class hierarchy. See [Polymorphism](05_Polymorphism.md) when you are ready for it [2].
+Here, every animal eats in exactly the same way: there is one `eat()` function. Letting a dog eat *differently* from other animals, while `feed()` stays unchanged, needs **virtual functions**. That is covered in [Polymorphism](05_Polymorphism.md) [4].
 
 ## 4. Common mistakes
 
-### Using inheritance for a “has-a” relationship
+### Using inheritance for a "has-a" relationship
 
 A dog **is an** animal, so inheritance fits.
 
 A dog **has a** collar. A dog is not a collar, so `Dog` should not inherit from `Collar` just to use it.
 
-**Composition is the construction of a class using objects of other classes as members.** In simple words, one object contains another. A collar stored inside a dog object would be composition.
+**Composition is the construction of a class using objects of other classes as members.** In simple words, one object contains another. A `Collar` member stored inside each dog would be composition.
 
-### Assuming private members become public
+### Assuming private members become accessible
 
-Public inheritance does not give `Dog` direct access to private members of `Animal`.
+Public inheritance does **not** let `Dog` touch `Animal`'s private `name_`. Writing `std::cout << name_;` inside `Dog` would not compile. The name still exists inside every dog; `Dog` just has to use `Animal`'s public `name()` function to read it.
 
-| Base member access | What it means for `Dog` under public inheritance |
-|--------------------|-------------------------------------------------|
-| `public` | `Dog` and ordinary outside code can use it |
-| `protected` | `Dog` can use it subject to protected-access rules; ordinary outside code cannot |
-| `private` | `Dog` cannot access it directly; it must use operations exposed by `Animal` |
+| Member in `Animal` | Can `Dog`'s own functions use it? | Can outside code, such as `main()`, use it? |
+|--------------------|-----------------------------------|---------------------------------------------|
+| `public` | Yes | Yes |
+| `protected` | Yes | No |
+| `private` | No; it must use `Animal`'s public or protected functions | No |
 
-Our example uses public functions so the main relationship stays easy to see.
+It may be tempting to make `name_` protected so `Dog` can change it freely. Avoid that when the base class has rules about its data, because every derived class could then skip those rules.
+
+### Forgetting to build the base part
+
+If `Dog`'s constructor leaves out `: Animal(name)`, C++ tries to build the animal part with no arguments. `Animal` has no constructor that takes zero arguments, so the code does not compile. A derived constructor must say how to build its base part.
+
+The order is always the same: the base part is built first, then the derived part. When the object goes away, the order is reversed: the derived part is cleaned up first, then the base part.
 
 ### Forgetting `public` in the inheritance declaration
 
-For a declaration beginning with `class`, inheritance is private by default. Write `class Dog : public Animal` when outside code should be able to treat a dog as an animal.
+For a class declared with the `class` keyword, inheritance is private if you leave the word out. With `class Dog : Animal`, outside code could no longer call `dog.eat()` or `feed(dog)`. Write `class Dog : public Animal`. (For a `struct`, the default is public.)
 
-With private inheritance, `dog.eat()` and `feed(dog)` would not be allowed from ordinary outside code in this example.
+### Copying a dog into an animal
+
+```cpp
+Animal copy = dog;
+// copy.bark(); // Error: copy is only an Animal.
+```
+
+**Object slicing is the loss of the derived-class portion when a derived object is copied into a base-class object by value** [5]. In plain language, only the animal part of Rex is copied. The result is a plain `Animal` named Rex, not a dog, and anything `Dog` added is gone.
+
+Use a reference, as `feed(const Animal&)` does, when you want to work with the original dog.
 
 ### Assuming the base class gets the derived class's features
 
@@ -211,35 +247,36 @@ With private inheritance, `dog.eat()` and `feed(dog)` would not be allowed from 
 
 ### Assuming every inherited function is virtual
 
-`eat()` is non-virtual. If a derived class later defines a same-named function, calls through an `Animal&` still use the base version. Virtual functions and overriding are explained in the next note [2].
+`eat()` is an ordinary, non-virtual function. If `Dog` defined its own `eat()`, calls through an `Animal&`, such as inside `feed()`, would still run `Animal`'s version. Virtual functions are explained in [Polymorphism](05_Polymorphism.md) [4].
 
-### Overlooking object lifetime
+### Deleting a dog through an animal pointer
 
-The base part is constructed before the derived part. Destruction happens in the reverse order. The compiler supplies the constructors and destructors needed by these simple classes.
-
-The example uses a local `Dog` object, which is cleaned up automatically. If a later design deletes derived objects through base pointers, the base normally needs a public virtual destructor; the polymorphism note covers that rule [3].
+This example uses local objects, which C++ cleans up automatically. If a program instead creates a `Dog` with `new` and deletes it through an `Animal*`, `Animal` must have a **virtual destructor** (a cleanup function marked `virtual`). Otherwise the behavior is **undefined**: C++ makes no promise about what happens [6]. The polymorphism note covers this.
 
 ## 5. Names you may encounter
 
 You only need **single inheritance** for the example above. The other names describe larger arrangements of classes.
 
-| Form | Standard meaning |
-|------|------------------|
+| Form | Meaning |
+|------|---------|
 | Single inheritance | A derived class has one direct base class |
 | Multiple inheritance | A derived class has more than one direct base class |
-| Multilevel inheritance | A class derives from a class that itself derives from another class |
-| Hierarchical inheritance | Multiple classes derive from the same base class |
+| Multilevel inheritance | A class derives from a class that itself derives from another, such as `Puppy` from `Dog` from `Animal` |
+| Hierarchical inheritance | Several classes derive from the same base, such as `Dog` and `Cat` from `Animal` |
 | Hybrid inheritance | A hierarchy combines more than one of these patterns |
 
-These are descriptions of class relationships, not separate C++ keywords.
+These names are common in textbooks and interviews. They are not C++ keywords, and only single and multiple inheritance are terms used by the C++ standard itself.
 
 ## 6. A short design checklist
 
-1. Can you honestly say the derived type “is a” base type?
-2. Which behavior belongs in the base class?
-3. What does the derived class add?
-4. Can code using the base type still work correctly with the derived type?
-5. Would composition better describe a “has-a” relationship?
+1. Can you honestly say the derived type "is a" base type?
+2. Would composition better describe a "has-a" relationship?
+3. Which data and behavior genuinely belong to every kind, and so belong in the base class?
+4. What does the derived class add?
+5. Is the base data private, with the derived class using the base's functions?
+6. Does every derived constructor build the base part, such as `: Animal(name)`?
+7. Can code using the base type still work correctly with the derived type?
+8. Will anything delete derived objects through a base pointer? If so, give the base a virtual destructor.
 
 ## 7. Self-test
 
@@ -252,7 +289,16 @@ These are descriptions of class relationships, not separate C++ keywords.
 
 </details>
 
-**Why can we call `dog.eat()` when `Dog` does not define `eat()`?**
+**Why does `feed(dog)` fail in the bad version but work in the good one?**
+
+<details>
+<summary>Answer</summary>
+
+In the bad version, `Dog` and `Animal` are unrelated classes that merely look alike. In the good version, `Dog` publicly inherits from `Animal`, so a dog can be used wherever an `Animal&` is expected.
+
+</details>
+
+**Why can we call `eat()` on a dog when `Dog` does not define `eat()`?**
 
 <details>
 <summary>Answer</summary>
@@ -261,21 +307,30 @@ These are descriptions of class relationships, not separate C++ keywords.
 
 </details>
 
-**Can an ordinary `Animal` object call `bark()`?**
+**Why does `bark()` call `name()` instead of reading `name_`?**
 
 <details>
 <summary>Answer</summary>
 
-No. `bark()` is defined only in `Dog`. The base class does not acquire the derived class's added members.
+`name_` is private in `Animal`, so even a derived class cannot use it directly. `name()` is public, so `Dog` can call it.
 
 </details>
 
-**Why can `feed(const Animal& animal)` accept a dog?**
+**What happens if `Dog`'s constructor leaves out `: Animal(name)`?**
 
 <details>
 <summary>Answer</summary>
 
-Public inheritance allows the reference to bind to the animal part of the existing dog object. No separate animal object is copied.
+It does not compile. C++ would try to build the animal part with no arguments, and `Animal` has no such constructor.
+
+</details>
+
+**After `Animal copy = dog;`, can you call `copy.bark()`?**
+
+<details>
+<summary>Answer</summary>
+
+No. Only the animal part was copied, so `copy` is a plain `Animal`. This is object slicing.
 
 </details>
 
@@ -288,21 +343,25 @@ No. A dog has a collar; it is not a collar. Use composition for that relationshi
 
 </details>
 
-**Does this program use virtual-function dispatch?**
+**Does this program use virtual functions?**
 
 <details>
 <summary>Answer</summary>
 
-No. `eat()` is a shared non-virtual function. Inheritance does not automatically make functions virtual.
+No. `eat()` is one shared, non-virtual function. Inheritance does not automatically make functions virtual.
 
 </details>
 
 ## 8. TL;DR
 
-Inheritance lets a derived class reuse and extend a base class. `Dog` is an `Animal`: it inherits `eat()` and adds `bark()`. Use public inheritance for a valid “is-a” relationship and composition for a “has-a” relationship.
+Inheritance lets a derived class reuse and extend a base class. `Dog` is an `Animal`: it inherits the name and `eat()`, adds `bark()`, and can be passed wherever an `Animal&` is expected. Build the base part in the derived constructor, keep base data private, and pass objects by reference to avoid slicing. Use public inheritance for a real "is-a" relationship and composition for "has-a".
 
 ## Sources and further reading
 
-- [1] C++ Core Guidelines: [C.120 — Use class hierarchies for inherently hierarchical concepts](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rh-domain).
-- [2] cppreference: [Virtual functions](https://en.cppreference.com/w/cpp/language/virtual.html), explaining how virtual dispatch differs from non-virtual calls.
-- [3] C++ Core Guidelines: [C.35 — A base destructor should be public and virtual, or protected and non-virtual](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rc-dtor-virtual), for designing base-class destruction interfaces.
+- [1] Wikipedia: [Inheritance (object-oriented programming)](https://en.wikipedia.org/wiki/Inheritance_(object-oriented_programming)).
+- [2] C++ Core Guidelines: [C.120 — Use class hierarchies to represent concepts with inherent hierarchical structure (only)](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rh-domain).
+- [3] Wikipedia: [Liskov substitution principle](https://en.wikipedia.org/wiki/Liskov_substitution_principle).
+- [4] cppreference: [Virtual functions](https://en.cppreference.com/w/cpp/language/virtual.html), explaining how virtual calls differ from ordinary calls.
+- [5] C++ Core Guidelines: [C.145 — Access polymorphic objects through pointers and references](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rh-poly), including an explanation of slicing.
+- [6] C++ Core Guidelines: [C.35 — A base class destructor should be either public and virtual, or protected and non-virtual](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rc-dtor-virtual).
+- cppreference: [Derived classes](https://en.cppreference.com/w/cpp/language/derived_class), for inheritance access rules and base-class subobjects.

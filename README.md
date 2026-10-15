@@ -36,6 +36,10 @@ derived/                # build outputs (created by the build command)
 4. [Inheritance](./resources/OOPS/04_Inheritance.md)
 5. [Polymorphism](./resources/OOPS/05_Polymorphism.md)
 
+C++ language features:
+
+- [`explicit`](./resources/Cpp/01_Explicit.md)
+
 ## Building
 
 Build outputs are routed to `derived/`. Example:
