@@ -4,54 +4,59 @@
 
 **An object is an instance of a class, with its own identity and state and the behavior defined by that class.** In C++, the term *object* also applies to instances of non-class types, such as an `int`; this note focuses on class objects.
 
-For example, `WaterBottle` can describe water bottles in your program. Your gym bottle and desk bottle are two separate objects made using that class.
+All five notes use one example: **museum admission tickets**. Maya's adult ticket costs 1500 cents, Leo's child ticket costs 800 cents, and later Nora's senior ticket costs 1000 cents. Prices use whole cents to avoid decimal rounding problems. We assume the ticket category was chosen correctly at purchase; these examples do not check ages or take payments.
 
-## 1. Think of a house plan
+We develop the design in stages. Each complete program stands on its own; snippets labeled as additions belong in that chapter's program.
 
-A house plan describes the rooms a house will have. You can build several houses from the same plan.
+| Note | What the ticket example teaches |
+|------|---------------------------------|
+| Classes and objects | Create separate tickets from one class |
+| [Encapsulation](02_Encapsulation.md) | Keep ticket prices valid through checked operations |
+| [Abstraction](03_Abstraction.md) | Print a receipt using a ticket's public operations |
+| [Inheritance](04_Inheritance.md) | Model adult and child tickets as kinds of admission ticket |
+| [Polymorphism](05_Polymorphism.md) | Ask different ticket kinds for their prices through one interface |
 
-The plan is like a **class**. Each house is like an **object**.
+## 1. Think of a ticket template
 
-The houses follow the same plan, but they are separate. Painting one house does not paint all the others.
+A museum uses one ticket template with spaces for a visitor's name and a price. It can issue many tickets using that template.
 
-Likewise, two water-bottle objects use the same class, but each keeps track of its own water.
+The template is like a **class**. Each issued ticket is like an **object**.
+
+Maya's and Leo's tickets have the same fields, but their values are separate. Changing Maya's ticket does not change Leo's.
 
 ## 2. Why do we need classes?
 
-Suppose you want to track two bottles without a class:
+Suppose you track two tickets without a class:
 
 ```cpp
 #include <iostream>
+#include <string>
 
 int main() {
-    int gymCapacityMl = 750;
-    int gymWaterMl = 0;
+    std::string adultVisitor = "Maya";
+    int adultPriceCents = 1500;
 
-    int deskCapacityMl = 500;
-    int deskWaterMl = 0;
+    std::string childVisitor = "Leo";
+    int childPriceCents = 800;
 
-    gymWaterMl = gymCapacityMl;
-    deskWaterMl = gymCapacityMl; // Bug: should be deskCapacityMl.
+    childPriceCents = adultPriceCents; // Bug: copied the wrong price.
+    adultPriceCents = -100;           // Bug: a price cannot be negative.
 
-    gymWaterMl -= 1000; // More water than the bottle contains.
-
-    std::cout << "Gym: " << gymWaterMl << " ml\n";
-    std::cout << "Desk: " << deskWaterMl << " ml\n";
+    std::cout << adultVisitor << ": " << adultPriceCents << " cents\n";
+    std::cout << childVisitor << ": " << childPriceCents << " cents\n";
 }
 ```
 
-This prints:
+Output:
 
 ```text
-Gym: -250 ml
-Desk: 750 ml
+Maya: -100 cents
+Leo: 1500 cents
 ```
 
-A bottle cannot hold negative water, and the desk bottle should hold only 500 ml.
+The variables are separate. Nothing groups each visitor with their price or checks the price when it changes.
 
-The variables are separate. Nothing in this code connects each bottle's water amount to its capacity or checks the rules when the amount changes.
-
-A class lets us keep each bottle's data and the functions that use it together.
+A class keeps each ticket's data and the functions that use it together. It can reject negative prices, although it cannot detect every mistake: 1500 is a valid number even if you intended 800. Later notes give each ticket category its own price behavior.
 
 ## 3. A complete example with a class
 
@@ -60,106 +65,87 @@ A class lets us keep each bottle's data and the functions that use it together.
 #include <stdexcept>
 #include <string>
 
-class WaterBottle {
+class AdmissionTicket {
 public:
-    WaterBottle(std::string label, int capacityMl)
-        : label_(label), capacityMl_(capacityMl) {
-        if (capacityMl_ <= 0) {
-            throw std::invalid_argument("Capacity must be positive");
+    AdmissionTicket(const std::string& visitor, int priceCents)
+        : visitor_(visitor), priceCents_(priceCents) {
+        if (priceCents_ < 0) {
+            throw std::invalid_argument("Price must not be negative");
         }
     }
 
-    void fill() {
-        waterMl_ = capacityMl_;
-    }
-
-    int drink(int requestedMl) {
-        if (requestedMl <= 0) {
-            return 0;
+    void setPriceCents(int priceCents) {
+        if (priceCents < 0) {
+            throw std::invalid_argument("Price must not be negative");
         }
-
-        int amount = requestedMl;
-        if (amount > waterMl_) {
-            amount = waterMl_;
-        }
-
-        waterMl_ -= amount;
-        return amount;
+        priceCents_ = priceCents;
     }
 
-    int waterMl() const {
-        return waterMl_;
+    std::string visitor() const {
+        return visitor_;
     }
 
-    std::string label() const {
-        return label_;
+    int priceCents() const {
+        return priceCents_;
     }
 
 private:
-    std::string label_;
-    int capacityMl_;
-    int waterMl_ = 0;
+    std::string visitor_;
+    int priceCents_;
 };
 
 int main() {
-    WaterBottle gym("Gym bottle", 750);
-    WaterBottle desk("Desk bottle", 500);
+    AdmissionTicket adult("Maya", 1500);
+    AdmissionTicket child("Leo", 800);
 
-    gym.fill();
-    desk.fill();
-
-    int amount = gym.drink(1000);
-
-    std::cout << gym.label() << ": drank " << amount << " ml, "
-              << gym.waterMl() << " ml left\n";
-    std::cout << desk.label() << ": " << desk.waterMl() << " ml left\n";
+    std::cout << adult.visitor() << ": " << adult.priceCents() << " cents\n";
+    std::cout << child.visitor() << ": " << child.priceCents() << " cents\n";
 }
 ```
 
 Output:
 
 ```text
-Gym bottle: drank 750 ml, 0 ml left
-Desk bottle: 500 ml left
+Maya: 1500 cents
+Leo: 800 cents
 ```
 
 ### Read the class from the inside out
 
-Each bottle stores three values:
+Each ticket stores two values:
 
 | Name | Meaning |
 |------|---------|
-| `label_` | The bottle's name |
-| `capacityMl_` | How much water it can hold |
-| `waterMl_` | How much water it currently holds |
+| `visitor_` | The visitor's name |
+| `priceCents_` | The ticket's price in whole cents |
 
-**Data members** are variables declared as members of a class to represent its data. These are non-static data members, so each object has its own values. The ending `_` is just a naming choice to help recognize them.
+**Data members** are variables declared as members of a class to represent its data. These are non-static data members, so each object has its own values. The ending `_` is a naming choice to help recognize them.
 
-**Member functions**, also called **methods**, are functions declared as members of a class that define its operations. In this example, they provide the actions available on each bottle.
+**Member functions**, also called **methods**, are functions declared as members of a class that define its operations. Here, `visitor()` and `priceCents()` read ticket details, and `setPriceCents()` changes a price after checking it.
 
-### How a bottle is created
+### How a ticket is created
 
 ```cpp
-WaterBottle gym("Gym bottle", 750);
+AdmissionTicket adult("Maya", 1500);
 ```
 
-Read this as: create a `WaterBottle` named `gym`, with the label "Gym bottle" and a capacity of 750 ml.
+Read this as: create an `AdmissionTicket` object named `adult`, for Maya, with a price of 1500 cents. At this stage, `adult` and `child` are variable names, not different C++ types.
 
-**A constructor is a special member function invoked to initialize an object of its class.** In C++, it has the same name as the class and no return type. Here, the constructor is named `WaterBottle`.
+**A constructor is a special member function invoked to initialize an object of its class.** It has the same name as the class and no return type. Here, it is named `AdmissionTicket`.
 
-The part after `:` gives the stored variables their starting values. `waterMl_ = 0` makes every new bottle start empty.
+The part after `:` gives the stored variables their starting values. Both members are initialized before the constructor body runs.
 
-If the capacity is zero or negative, `throw std::invalid_argument(...)` reports an error and stops creation of that bottle. This kind of error is called an **exception**. If the program does not handle it, the program stops.
+If the price is negative, `throw std::invalid_argument(...)` reports an error and stops creation of the ticket. This kind of error is an **exception**. If the program does not handle it, the program stops. Zero is allowed for a free ticket.
 
-### What happens when we use the bottle?
+### What happens when we use the ticket?
 
-1. `gym.fill()` sets the gym bottle's water to its capacity: 750 ml.
-2. `desk.fill()` uses the desk bottle's capacity: 500 ml.
-3. `gym.drink(1000)` asks for 1000 ml.
-4. The gym bottle has only 750 ml, so `drink()` removes 750 and returns that amount.
-5. The gym bottle is now empty. The desk bottle still has 500 ml.
+1. `AdmissionTicket adult("Maya", 1500)` creates Maya's ticket.
+2. `AdmissionTicket child("Leo", 800)` creates Leo's separate ticket.
+3. `adult.visitor()` returns Maya's name.
+4. `adult.priceCents()` returns 1500.
+5. The same functions on `child` return Leo's name and 800.
 
-The dot in `gym.fill()` means **call this function on this object**.
+The dot in `adult.priceCents()` means **call this function on this object**.
 
 ### What do the other keywords mean?
 
@@ -167,121 +153,117 @@ The dot in `gym.fill()` means **call this function on this object**.
 |------|---------------|
 | `public:` | Code outside the class can use these functions |
 | `private:` | Outside code cannot directly access these stored values |
-| `void fill()` | `fill()` does its work without returning a result |
-| `int drink(...)` | `drink()` returns a whole number |
-| `int waterMl() const` | This function reads the amount without changing the bottle |
+| `void setPriceCents(...)` | Change the price without returning a result |
+| `int priceCents() const` | Return a whole number without changing the ticket |
 | `std::string` | The C++ type used here to store text |
+| `const std::string& visitor` | Receive the caller's text without copying or changing it; the constructor then copies it into `visitor_` |
 
-Classes let us put these pieces together. Choosing which data outside code can change is covered in [Encapsulation](02_Encapsulation.md).
+Choosing which data outside code can change is covered in [Encapsulation](02_Encapsulation.md).
 
 ## 4. One class, separate objects
 
-`gym` and `desk` use the same functions, but have separate stored values.
+`adult` and `child` use the same functions but have separate stored values.
 
-| Object | Capacity | Water after the example |
-|--------|----------|-------------------------|
-| `gym` | 750 ml | 0 ml |
-| `desk` | 500 ml | 500 ml |
+| Object | Visitor | Price |
+|--------|---------|-------|
+| `adult` | Maya | 1500 cents |
+| `child` | Leo | 800 cents |
 
-Adding another bottle takes one line:
+Adding another ticket takes one line:
 
 ```cpp
-WaterBottle travel("Travel bottle", 1000);
+AdmissionTicket senior("Nora", 1000);
 ```
 
-You do not need to write another `fill()` or `drink()` function.
+You do not need to write another `visitor()` or `priceCents()` function.
 
 ## 5. Copies and references
 
-For this class, copying a bottle creates a separate bottle with the same starting values:
+The following snippets are separate experiments using the class above.
+
+For this class, copying a ticket creates a separate object with the same starting values:
 
 ```cpp
-WaterBottle original("Original", 500);
-original.fill();
+AdmissionTicket original("Maya", 1500);
+AdmissionTicket copy = original;
+copy.setPriceCents(1000);
 
-WaterBottle copy = original;
-copy.drink(100);
-
-std::cout << original.waterMl() << ' ' << copy.waterMl();
+std::cout << original.priceCents() << ' ' << copy.priceCents();
 ```
 
-This prints `500 400`. Changing the copy does not change the original.
+This prints `1500 1000`. Changing the copy does not change the original.
 
-The same thing happens when a function receives a bottle like this:
+The same thing happens when a function receives a ticket by value:
 
 ```cpp
-void sip(WaterBottle bottle) {
-    bottle.drink(100);
+void makeFree(AdmissionTicket ticket) {
+    ticket.setPriceCents(0);
 }
 ```
 
-`bottle` is a copy. Calling `sip(original)` will not change `original`.
+`ticket` is a copy. Calling `makeFree(original)` will not change `original`.
 
-To work with the original bottle, use `&`:
+To work with the original ticket, replace that function with:
 
 ```cpp
-void sip(WaterBottle& bottle) {
-    bottle.drink(100);
+void makeFree(AdmissionTicket& ticket) {
+    ticket.setPriceCents(0);
 }
 ```
 
-This is called a **reference**: another name for an existing object. Now `sip(original)` changes the original bottle.
+A **reference**, written with `&`, is another name for an existing object. Now `makeFree(original)` changes the original ticket's price to zero.
 
-Use `const WaterBottle&` when the function should read the existing bottle without changing it or making a copy.
+Use `const AdmissionTicket&` when a function should read the existing ticket without changing it or making a copy.
 
 ## 6. When does an object go away?
 
-A local object such as `gym` in `main()` is cleaned up when execution leaves the block where it was created.
+A local object such as `adult` in `main()` is cleaned up when execution leaves the block where it was created.
 
-**A destructor is a special member function invoked when an object's lifetime ends to perform cleanup.** In C++, its name is the class name prefixed with `~`. For `WaterBottle`, its name would be `~WaterBottle()`.
+**A destructor is a special member function invoked when an object's lifetime ends to perform cleanup.** Its name is the class name prefixed with `~`: here, `~AdmissionTicket()`.
 
-We do not need to write one here. C++ provides it and handles cleanup of the bottle's stored values, including its string.
-
-For now, creating objects as local variables is a simple way to let C++ handle their cleanup.
+We do not need to write one in this version. C++ provides it and handles cleanup of the ticket's stored values, including its string. The polymorphism note will add a virtual destructor when introducing a different use of the class.
 
 ## 7. The key intents
 
 ### Keep data and the actions on it together
 
-A bottle's water amount and the `drink()` rule that changes it live in one place. You do not have to search the program to find every piece of code that touches the water.
+A ticket's price and the checked operation that changes it live in one place.
 
 ### Make a new type that reads like the problem
 
-`WaterBottle gym(...)` and `gym.fill()` say what the program is about. Separate `int` variables do not.
+`AdmissionTicket adult(...)` and `adult.priceCents()` describe museum tickets directly.
 
 ### Create many objects from one description
 
-Write the rules once in the class. Every bottle you create follows them, and each one keeps its own values.
+Write the rules once. Every ticket follows them, and each keeps its own values.
 
 ### Start every object in a valid state
 
-The constructor runs when each bottle is created, so a bottle with zero or negative capacity is rejected.
+The constructor initializes the name and price, and rejects negative prices.
 
 ## 8. Common mistakes
 
 ### Forgetting starting values
 
-Give stored numbers a starting value in the class or constructor. A declaration like `int waterMl_;` alone does not always start at zero.
+Initialize stored numbers in the class or constructor. A declaration like `int priceCents_;` alone does not always start at zero. Our constructor explicitly initializes it.
 
 ### Letting one class do too much
 
-A water bottle should track its water and the actions on it. Saving files, sending reminders, and drawing screens can be handled separately.
-
-A class is easier to understand when it has one clear purpose.
+A ticket stores ticket details and enforces its rules. Saving files, sending receipts, and drawing screens can be handled separately.
 
 ### Expecting a copy to change the original
 
-Use a reference, such as `WaterBottle&`, when a function must change an existing bottle.
+Use `AdmissionTicket&` when a function must change an existing ticket.
 
 ### Forgetting const on functions that only read
 
-`waterMl() const` can be called through a `const WaterBottle&`. Without the ending `const`, C++ will reject that call because the function has not promised to leave the bottle unchanged.
+`priceCents() const` can be called through a `const AdmissionTicket&`. Without the ending `const`, C++ rejects that call because the function has not promised to leave the ticket unchanged.
 
 ### Choosing class or struct by habit
 
-Both can store data and have functions. Members of a `struct` are public unless you say otherwise; members of a `class` are private unless you say otherwise.
+Both can store data and have functions. Members of a `struct` are public by default; members of a `class` are private by default.
 
-A `struct` is often convenient for simple values that other code can edit directly, such as a point's `x` and `y`. A `class` is often useful when changes need checks, as with the water amount.
+A `struct` can be useful for a freely editable draft of receipt text. A `class` is useful for a ticket whose price changes need checks.
 
 ## 9. Before writing a class
 
@@ -289,7 +271,7 @@ A `struct` is often convenient for simple values that other code can edit direct
 2. List the values each object needs to store.
 3. List the actions it needs to provide.
 4. Give every stored value a sensible starting value.
-5. Check any rules when the object is created and when its data changes.
+5. Check rules when the object is created and when its data changes.
 6. Use `const` on functions that only read.
 7. Keep unrelated work outside the class.
 
@@ -300,16 +282,16 @@ A `struct` is often convenient for simple values that other code can edit direct
 <details>
 <summary>Answer</summary>
 
-A class is a user-defined type that defines the data and operations of its instances. An object is an instance of that class, with its own identity and state. `WaterBottle` is a class; `gym` and `desk` are objects.
+`AdmissionTicket` is a class defining ticket data and operations. `adult` and `child` are separate objects of that class, each with its own identity and state.
 
 </details>
 
-**If you fill the gym bottle, does the desk bottle fill too?**
+**If you change Maya's price, does Leo's price change too?**
 
 <details>
 <summary>Answer</summary>
 
-No. Each bottle has its own water amount.
+No. Each ticket has its own `priceCents_`.
 
 </details>
 
@@ -318,22 +300,22 @@ No. Each bottle has its own water amount.
 <details>
 <summary>Answer</summary>
 
-A constructor initializes an object of its class. Our constructor stores the label and capacity, and rejects a capacity that is zero or negative.
+It initializes the visitor and price, and rejects a negative price.
 
 </details>
 
-**Why does sip(WaterBottle bottle) leave the original bottle unchanged?**
+**Why does `makeFree(AdmissionTicket ticket)` leave the original unchanged?**
 
 <details>
 <summary>Answer</summary>
 
-The function receives a copy. Use WaterBottle& if the function should change the original.
+It receives a copy. Use `AdmissionTicket&` to change the original.
 
 </details>
 
 ## 11. TL;DR
 
-A class defines a user-defined type by grouping data members and member functions. Each object is an instance of that class with its own non-static data members. Constructors initialize objects, and destructors perform cleanup when their lifetimes end.
+A class groups data members and member functions into a user-defined type. Each object has its own non-static data members. Constructors initialize objects; destructors perform cleanup when their lifetimes end. Here, `AdmissionTicket` defines the type, and Maya's and Leo's tickets are separate objects.
 
 ## Sources and further reading
 

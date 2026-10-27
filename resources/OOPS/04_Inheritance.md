@@ -4,342 +4,375 @@
 
 In simple words, a new class can reuse the data and functions of an existing class and add features of its own.
 
-## 1. A real-world analogy: a dog is an animal
+We continue with the museum tickets from the earlier notes. Maya's adult ticket costs 1500 cents; Leo's child ticket costs 800 cents. Previously, both were objects of one editable-price class. Here, we introduce distinct `AdultTicket` and `ChildTicket` types. Their shared `AdmissionTicket` base stores the visitor, while each category supplies its own fixed price. This version removes `setPriceCents()` and the stored price.
 
-Every animal has a name and can eat. A dog is an animal, so it also has a name and eats. A dog can additionally bark.
+Each complete program is a separate version of the example. This chapter first teaches inheritance with ordinary functions; the next adds virtual dispatch.
 
-We can express this using two classes:
+## 1. A real-world analogy: an adult ticket is an admission ticket
 
-- `Animal` stores a name and provides `eat()`.
-- `Dog` inherits both from `Animal` and adds `bark()`.
+Every museum admission ticket has a visitor's name. An adult ticket is an admission ticket, so it also has a visitor's name. Its category additionally provides an adult price.
 
-**A base class is a class from which another class derives.** Here, `Animal` is the base class: it provides the common data and behavior.
+We can express this using classes:
 
-**A derived class is a class that inherits from another class.** Here, `Dog` is the derived class: it reuses what `Animal` provides and adds its own behavior.
+- `AdmissionTicket` stores the visitor and provides `visitor()`.
+- `AdultTicket` inherits the shared part and adds `priceCents()`, returning 1500.
+- `ChildTicket` inherits the same shared part and adds `priceCents()`, returning 800.
 
-The relationship is **"a dog is an animal."**
+**A base class is a class from which another class derives.** Here, `AdmissionTicket` is the base class: it provides common data and behavior.
+
+**A derived class is a class that inherits from another class.** Here, `AdultTicket` and `ChildTicket` are derived classes: they reuse what the base provides and add their own operations.
+
+The relationship is **"an adult ticket is an admission ticket."**
 
 ## 2. Bad vs. good: writing the same thing twice
 
 ### Without inheritance
 
-These two classes repeat the same name storage and the same `eat()` function:
+These unrelated classes repeat the visitor storage and getter:
 
 ```cpp
 #include <iostream>
 #include <string>
 
-class Animal {
+class AdmissionTicket {
 public:
-    explicit Animal(const std::string& name) : name_(name) {}
+    explicit AdmissionTicket(const std::string& visitor) : visitor_(visitor) {}
 
-    void eat() const {
-        std::cout << name_ << " is eating\n";
+    std::string visitor() const {
+        return visitor_;
     }
 
 private:
-    std::string name_;
+    std::string visitor_;
 };
 
-class Dog {
+class AdultTicket {
 public:
-    explicit Dog(const std::string& name) : name_(name) {}
+    explicit AdultTicket(const std::string& visitor) : visitor_(visitor) {}
 
-    void eat() const {
-        std::cout << name_ << " is eating\n";
+    std::string visitor() const {
+        return visitor_;
     }
 
-    void bark() const {
-        std::cout << name_ << " says Woof!\n";
+    int priceCents() const {
+        return 1500;
     }
 
 private:
-    std::string name_;
+    std::string visitor_;
 };
 
-void feed(const Animal& animal) {
-    animal.eat();
+class ChildTicket {
+public:
+    explicit ChildTicket(const std::string& visitor) : visitor_(visitor) {}
+
+    std::string visitor() const {
+        return visitor_;
+    }
+
+    int priceCents() const {
+        return 800;
+    }
+
+private:
+    std::string visitor_;
+};
+
+void printVisitor(const AdmissionTicket& ticket) {
+    std::cout << ticket.visitor() << '\n';
 }
 
 int main() {
-    Animal parrot("Polly");
-    Dog dog("Rex");
+    AdultTicket adult("Maya");
+    ChildTicket child("Leo");
 
-    feed(parrot);
-    // feed(dog); // Error: a Dog is not an Animal to the compiler.
-    dog.eat();
-    dog.bark();
+    // printVisitor(adult); // Error: AdultTicket is unrelated to AdmissionTicket.
+    // printVisitor(child); // Error: ChildTicket is unrelated too.
+    std::cout << adult.visitor() << '\n';
+    std::cout << child.visitor() << '\n';
+    std::cout << adult.priceCents() << ' ' << child.priceCents() << " cents\n";
 }
 ```
 
 Output:
 
 ```text
-Polly is eating
-Rex is eating
-Rex says Woof!
+Maya
+Leo
+1500 800 cents
 ```
 
 There are two problems:
 
-1. **The code is duplicated.** The name, the constructor and `eat()` are written twice. If eating changes, both copies must be updated, and it is easy to forget one.
-2. **C++ does not know a dog is an animal.** `feed()` accepts an `Animal`, but `feed(dog)` does not compile. The two classes merely look alike; to the compiler they are unrelated.
+1. **The code is duplicated.** Visitor storage and access are repeated across the classes. A change to that shared behavior needs several edits.
+2. **C++ does not know these are kinds of admission ticket.** `printVisitor()` takes an `AdmissionTicket&`, but neither specific type can be passed to it. Similar-looking classes are still unrelated types.
 
-Repeated code alone is not enough reason to use inheritance. Here, there is also a real "is-a" relationship: a dog is a kind of animal [2].
+Repeated code alone is not enough reason to use inheritance. There must also be a useful "is-a" relationship [2]. This small hierarchy teaches the mechanism; fixed prices alone could still be represented with the earlier single class.
 
 ### With inheritance
 
-Write the shared parts once in `Animal`, then let `Dog` inherit them:
+Write the shared parts once in `AdmissionTicket`, then let both categories inherit them:
 
 ```cpp
 #include <iostream>
 #include <string>
 
-class Animal {
+class AdmissionTicket {
 public:
-    explicit Animal(const std::string& name) : name_(name) {}
+    explicit AdmissionTicket(const std::string& visitor) : visitor_(visitor) {}
 
-    std::string name() const {
-        return name_;
-    }
-
-    void eat() const {
-        std::cout << name_ << " is eating\n";
+    std::string visitor() const {
+        return visitor_;
     }
 
 private:
-    std::string name_;
+    std::string visitor_;
 };
 
-class Dog : public Animal {
+class AdultTicket : public AdmissionTicket {
 public:
-    explicit Dog(const std::string& name) : Animal(name) {}
+    explicit AdultTicket(const std::string& visitor) : AdmissionTicket(visitor) {}
 
-    void bark() const {
-        std::cout << name() << " says Woof!\n";
+    int priceCents() const {
+        return 1500;
     }
 };
 
-void feed(const Animal& animal) {
-    animal.eat();
+class ChildTicket : public AdmissionTicket {
+public:
+    explicit ChildTicket(const std::string& visitor) : AdmissionTicket(visitor) {}
+
+    int priceCents() const {
+        return 800;
+    }
+};
+
+void printVisitor(const AdmissionTicket& ticket) {
+    std::cout << ticket.visitor() << '\n';
 }
 
 int main() {
-    Animal parrot("Polly");
-    Dog dog("Rex");
+    AdultTicket adult("Maya");
+    ChildTicket child("Leo");
 
-    feed(parrot);
-    feed(dog);  // Works: a Dog is an Animal.
-    dog.bark();
+    printVisitor(adult);
+    printVisitor(child);
+    std::cout << adult.priceCents() << ' ' << child.priceCents() << " cents\n";
 }
 ```
 
 Output:
 
 ```text
-Polly is eating
-Rex is eating
-Rex says Woof!
+Maya
+Leo
+1500 800 cents
 ```
 
-`Dog` no longer stores its own name or defines its own `eat()`. It uses the ones inherited from `Animal`, and `feed(dog)` now compiles.
+Neither derived class repeats `visitor_` or `visitor()`. Both can now be passed to `printVisitor()`.
 
 ### Read the syntax
 
 | Code | Plain meaning |
 |------|---------------|
-| `class Dog : public Animal` | `Dog` is a kind of `Animal`. It gets `Animal`'s members, and code expecting an `Animal&` can accept a `Dog` |
-| `explicit Animal(const std::string& name)` | The constructor: it runs when an animal is created. `explicit` stops C++ from silently turning a string into an animal |
-| `: name_(name)` | Give the stored name its starting value |
-| `: Animal(name)` | In `Dog`'s constructor: build the animal part first, passing it the name |
-| `const std::string&` | Use the caller's text without copying it and without changing it |
-| `const` after a function, as in `eat() const` | This function only reads the object; it promises not to change its data |
-| `private:` | Only `Animal`'s own functions can use `name_`. `Dog` cannot either |
-| `const Animal& animal` | `feed()` works with the caller's existing animal, without copying it or changing it |
+| `class AdultTicket : public AdmissionTicket` | An adult ticket is a kind of admission ticket; code expecting a base reference can accept it |
+| `explicit AdmissionTicket(const std::string& visitor)` | Construct the base with a name; `explicit` prevents automatic conversion from a string to a ticket |
+| `: visitor_(visitor)` | Give the stored visitor its starting value |
+| `: AdmissionTicket(visitor)` | In a derived constructor, build the base part first with the visitor's name |
+| `const std::string&` | Read the caller's text without copying the argument or changing it |
+| `visitor() const` | Read the object without changing its data |
+| `private:` | Only the base's own functions can directly use `visitor_`; derived classes cannot |
+| `const AdmissionTicket& ticket` | Use the caller's existing ticket without copying or changing it |
 
-A **reference**, written with `&`, is another name for an existing object. `feed()` does not get its own copy; it uses the very animal you passed in.
+A **reference**, written with `&`, is another name for an existing object. `printVisitor()` uses the ticket you passed in.
 
 ### Walk through the program
 
-1. `Animal parrot("Polly")` creates an ordinary animal named Polly.
-2. `Dog dog("Rex")` starts creating a dog. Its constructor first runs `Animal(name)`, which builds the **animal part** of the dog and stores `"Rex"`.
-3. The `Dog` constructor then finishes. The dog has no extra data, so there is nothing more to set up.
-4. `feed(parrot)` calls `eat()` and prints `Polly is eating`.
-5. `feed(dog)` passes the dog where an `Animal&` is expected. That is allowed because a `Dog` is an `Animal`. It prints `Rex is eating`.
-6. `dog.bark()` runs `Dog`'s own function. `Dog` cannot read `name_` directly because it is private, so it calls the public `name()` function instead.
+1. `AdultTicket adult("Maya")` starts creating an adult ticket.
+2. Its constructor first calls `AdmissionTicket(visitor)`, which stores `"Maya"` in the base part.
+3. The adult constructor finishes. This derived class has no additional data to initialize.
+4. `ChildTicket child("Leo")` builds a separate base part storing `"Leo"`.
+5. `printVisitor(adult)` reads Maya's name through the inherited `visitor()` function.
+6. `printVisitor(child)` reads Leo's name through the same function.
+7. Direct calls to `adult.priceCents()` and `child.priceCents()` use the functions declared in their respective types.
 
-**A base-class subobject is the part of a derived object corresponding to one of its base classes.** In plain language, every `Dog` contains a complete `Animal` built inside it. That inner animal holds the name. It belongs only to this dog; Rex does not share it with Polly.
+**A base-class subobject is the part of a derived object corresponding to one of its base classes.** Each adult or child ticket contains its own `AdmissionTicket` part. Maya's and Leo's names remain separate.
 
-Inheritance works in one direction. A dog can use animal behavior, but an ordinary `Animal` object does not gain `bark()` from `Dog`.
+Inheritance works in one direction. A derived ticket can use base behavior, but the base does not gain the derived class's operations.
 
 ## 3. The key intents
 
 ### Express an "is-a" relationship
 
-A dog is an animal. Public inheritance tells the compiler so, which is why `feed(dog)` works. `feed()` only needs the `Animal` operations; it does not need to know the object is a dog.
+An adult ticket is an admission ticket. Public inheritance tells the compiler so, which is why `printVisitor(adult)` works. The function only needs the base's operations.
 
-**The Liskov Substitution Principle states that objects of a subtype should be usable in place of objects of their supertype without violating the properties expected by clients** [3]. In plain language, anywhere an animal works, a dog must work too, and keep every promise an animal makes. If `Animal` promises that `eat()` never fails, a `Dog` must not break that.
+**The Liskov Substitution Principle states that objects of a subtype should be usable in place of objects of their supertype without violating the properties expected by clients** [3]. In plain language, every derived ticket must keep the promises made by the general ticket. If `visitor()` promises the ticket holder's name, a derived ticket must preserve that meaning.
 
 ### Reuse common data and behavior
 
-The name and `eat()` are written once in `Animal`. `Dog` reuses them, and another animal class, such as `Cat`, could reuse them too. If eating changes, there is one place to change it.
+The visitor name and getter are written once. Both categories reuse them, and a later `SeniorTicket` can too.
 
 ### Add specific behavior
 
-`bark()` belongs to `Dog`. The base class does not need every action that every derived class might provide.
+In this version, `priceCents()` is declared only in the derived classes. Code working directly with an `AdultTicket` can call its price function.
 
-A function receiving `const Animal&` can call `eat()`, but it cannot call `bark()` through that reference, because not every animal can bark.
+A function receiving `const AdmissionTicket&` can call `visitor()`, but cannot call `priceCents()` yet: the base has no such operation. Matching function names in derived classes do not automatically create a shared base operation.
 
 ### Keep each class responsible for its own rules
 
-`Animal` sets up and protects its own name, even inside a dog. `Dog` sets up only what it adds. Each class looks after its own data.
+`AdmissionTicket` stores and protects the visitor name. Each category provides its own price. The derived classes do not need direct access to the name member.
 
 ### Keep inheritance distinct from polymorphism
 
-Here, every animal eats in exactly the same way: there is one `eat()` function. Letting a dog eat *differently* from other animals, while `feed()` stays unchanged, needs **virtual functions**. That is covered in [Polymorphism](05_Polymorphism.md) [4].
+There is one inherited, non-virtual `visitor()` function. Both derived price functions are also non-virtual in this chapter.
+
+The earlier `printReceipt(const AdmissionTicket&)` needs both name and price, so it cannot be used with this intermediate base yet. [Polymorphism](05_Polymorphism.md) adds a virtual `priceCents()` to the base, allowing the same receipt function to ask any category for its price [4].
 
 ## 4. Common mistakes
 
 ### Using inheritance for a "has-a" relationship
 
-A dog **is an** animal, so inheritance fits.
+An adult ticket **is an** admission ticket, so that relationship can use inheritance.
 
-A dog **has a** collar. A dog is not a collar, so `Dog` should not inherit from `Collar` just to use it.
+A ticket **has a** visitor name; it is not a string. `AdmissionTicket` stores a `std::string` member instead of inheriting from `std::string`.
 
-**Composition is the construction of a class using objects of other classes as members.** In simple words, one object contains another. A `Collar` member stored inside each dog would be composition.
+**Composition is the construction of a class using objects of other classes as members.** In plain language, one object contains another. The ticket's string member is an example.
 
 ### Assuming private members become accessible
 
-Public inheritance does **not** let `Dog` touch `Animal`'s private `name_`. Writing `std::cout << name_;` inside `Dog` would not compile. The name still exists inside every dog; `Dog` just has to use `Animal`'s public `name()` function to read it.
+Public inheritance does not let `AdultTicket` access private `visitor_` directly. Code in a derived class can call `visitor()` instead.
 
-| Member in `Animal` | Can `Dog`'s own functions use it? | Can outside code, such as `main()`, use it? |
-|--------------------|-----------------------------------|---------------------------------------------|
+| Member in `AdmissionTicket` | Can derived member functions use it? | Can outside code use it? |
+|-----------------------------|--------------------------------------|--------------------------|
 | `public` | Yes | Yes |
 | `protected` | Yes | No |
-| `private` | No; it must use `Animal`'s public or protected functions | No |
+| `private` | No; use base public or protected functions | No |
 
-It may be tempting to make `name_` protected so `Dog` can change it freely. Avoid that when the base class has rules about its data, because every derived class could then skip those rules.
+Making data protected lets derived classes bypass the base's rules. Prefer private data and operations that preserve those rules.
 
 ### Forgetting to build the base part
 
-If `Dog`'s constructor leaves out `: Animal(name)`, C++ tries to build the animal part with no arguments. `Animal` has no constructor that takes zero arguments, so the code does not compile. A derived constructor must say how to build its base part.
+If `AdultTicket` leaves out `: AdmissionTicket(visitor)`, C++ tries to construct the base without arguments. There is no zero-argument base constructor here, so compilation fails.
 
-The order is always the same: the base part is built first, then the derived part. When the object goes away, the order is reversed: the derived part is cleaned up first, then the base part.
+The base is built first, then the derived part. Cleanup happens in reverse order: derived part first, then base part.
 
 ### Forgetting `public` in the inheritance declaration
 
-For a class declared with the `class` keyword, inheritance is private if you leave the word out. With `class Dog : Animal`, outside code could no longer call `dog.eat()` or `feed(dog)`. Write `class Dog : public Animal`. (For a `struct`, the default is public.)
+With the `class` keyword, inheritance is private by default. Writing `class AdultTicket : AdmissionTicket` prevents outside code from using the inherited getter or passing the adult ticket as a base reference. Write `: public AdmissionTicket`. For a `struct`, inheritance defaults to public.
 
-### Copying a dog into an animal
+### Copying an adult ticket into a base ticket
+
+Using the inheritance program's classes and `adult` object:
 
 ```cpp
-Animal copy = dog;
-// copy.bark(); // Error: copy is only an Animal.
+AdmissionTicket copy = adult;
+std::cout << copy.visitor(); // Maya
+// copy.priceCents(); // Error: the base has no priceCents() operation here.
 ```
 
-**Object slicing is the loss of the derived-class portion when a derived object is copied into a base-class object by value** [5]. In plain language, only the animal part of Rex is copied. The result is a plain `Animal` named Rex, not a dog, and anything `Dog` added is gone.
+**Object slicing is the loss of the derived-class portion when a derived object is copied into a base-class object by value** [5]. The copy is a plain `AdmissionTicket` containing Maya's name. Its type no longer provides the adult price function.
 
-Use a reference, as `feed(const Animal&)` does, when you want to work with the original dog.
+Use a reference, as `printVisitor(const AdmissionTicket&)` does, to work with the original object.
 
-### Assuming the base class gets the derived class's features
+### Assuming the base gains derived features
 
-`Animal` does not inherit from `Dog`. You cannot call `bark()` on an ordinary `Animal` object.
+`AdmissionTicket` does not inherit from `AdultTicket`. Adding a price function to the adult class does not add it to the base.
 
 ### Assuming every inherited function is virtual
 
-`eat()` is an ordinary, non-virtual function. If `Dog` defined its own `eat()`, calls through an `Animal&`, such as inside `feed()`, would still run `Animal`'s version. Virtual functions are explained in [Polymorphism](05_Polymorphism.md) [4].
+`visitor()` is non-virtual. If `AdultTicket` declared its own same-named function, a call through an `AdmissionTicket&` would still use the base version. Virtual functions make different behavior possible through that base reference [4].
 
-### Deleting a dog through an animal pointer
+### Deleting a derived ticket through a base pointer
 
-This example uses local objects, which C++ cleans up automatically. If a program instead creates a `Dog` with `new` and deletes it through an `Animal*`, `Animal` must have a **virtual destructor** (a cleanup function marked `virtual`). Otherwise the behavior is **undefined**: C++ makes no promise about what happens [6]. The polymorphism note covers this.
+This program uses local objects, cleaned up automatically. If you create an `AdultTicket` with `new` and delete it through an `AdmissionTicket*`, the base needs a **virtual destructor**, a cleanup function marked `virtual`. Without it, behavior is **undefined**: C++ makes no promise about what happens [6]. The next note adds this destructor.
 
 ## 5. Names you may encounter
 
-You only need **single inheritance** for the example above. The other names describe larger arrangements of classes.
+Each derived ticket above uses single inheritance. Together, the two categories also form hierarchical inheritance.
 
 | Form | Meaning |
 |------|---------|
-| Single inheritance | A derived class has one direct base class |
-| Multiple inheritance | A derived class has more than one direct base class |
-| Multilevel inheritance | A class derives from a class that itself derives from another, such as `Puppy` from `Dog` from `Animal` |
-| Hierarchical inheritance | Several classes derive from the same base, such as `Dog` and `Cat` from `Animal` |
-| Hybrid inheritance | A hierarchy combines more than one of these patterns |
+| Single inheritance | A derived class has one direct base, as `AdultTicket` does |
+| Multiple inheritance | A class has more than one direct base |
+| Multilevel inheritance | A class derives from another derived class, for example `DiscountedAdultTicket` from `AdultTicket` from `AdmissionTicket` |
+| Hierarchical inheritance | Several classes derive from the same base, as adult and child tickets do |
+| Hybrid inheritance | A hierarchy combines more than one pattern |
 
-These names are common in textbooks and interviews. They are not C++ keywords, and only single and multiple inheritance are terms used by the C++ standard itself.
+These are descriptive terms used in textbooks and interviews, not C++ keywords. Only single and multiple inheritance are terms used by the C++ standard itself. The multilevel example describes a possible shape, not a recommendation to create a subclass for every discount.
 
 ## 6. A short design checklist
 
 1. Can you honestly say the derived type "is a" base type?
 2. Would composition better describe a "has-a" relationship?
-3. Which data and behavior genuinely belong to every kind, and so belong in the base class?
-4. What does the derived class add?
-5. Is the base data private, with the derived class using the base's functions?
-6. Does every derived constructor build the base part, such as `: Animal(name)`?
-7. Can code using the base type still work correctly with the derived type?
-8. Will anything delete derived objects through a base pointer? If so, give the base a virtual destructor.
+3. Which data and behavior belong to every kind?
+4. What does each derived class add?
+5. Is base data private, with derived classes using its operations?
+6. Does each derived constructor build the base part?
+7. Can code using the base still work correctly with derived objects?
+8. If deletion through a base pointer is needed, does the base have a virtual destructor?
 
 ## 7. Self-test
 
-**Which is the base class: `Animal` or `Dog`?**
+**Which is the base class: `AdmissionTicket` or `AdultTicket`?**
 
 <details>
 <summary>Answer</summary>
 
-`Animal` is the base class. `Dog` is the derived class because it inherits from `Animal`.
+`AdmissionTicket` is the base. `AdultTicket` derives from it.
 
 </details>
 
-**Why does `feed(dog)` fail in the bad version but work in the good one?**
+**Why does `printVisitor(adult)` fail in the bad version but work in the good one?**
 
 <details>
 <summary>Answer</summary>
 
-In the bad version, `Dog` and `Animal` are unrelated classes that merely look alike. In the good version, `Dog` publicly inherits from `Animal`, so a dog can be used wherever an `Animal&` is expected.
+The bad version has unrelated classes. Public inheritance in the good version allows an adult ticket to be used through an admission-ticket reference.
 
 </details>
 
-**Why can we call `eat()` on a dog when `Dog` does not define `eat()`?**
+**Why can we call `adult.visitor()` when `AdultTicket` does not define it?**
 
 <details>
 <summary>Answer</summary>
 
-`Dog` publicly inherits `Animal`'s public `eat()` function.
+It publicly inherits the base's `visitor()` function.
 
 </details>
 
-**Why does `bark()` call `name()` instead of reading `name_`?**
+**Can a derived ticket read `visitor_` directly?**
 
 <details>
 <summary>Answer</summary>
 
-`name_` is private in `Animal`, so even a derived class cannot use it directly. `name()` is public, so `Dog` can call it.
+No. It is private in the base. The derived class can call the public `visitor()` getter.
 
 </details>
 
-**What happens if `Dog`'s constructor leaves out `: Animal(name)`?**
+**What happens if the adult constructor omits `: AdmissionTicket(visitor)`?**
 
 <details>
 <summary>Answer</summary>
 
-It does not compile. C++ would try to build the animal part with no arguments, and `Animal` has no such constructor.
+Compilation fails because the base has no zero-argument constructor.
 
 </details>
 
-**After `Animal copy = dog;`, can you call `copy.bark()`?**
+**After `AdmissionTicket copy = adult;`, can you call `copy.priceCents()`?**
 
 <details>
 <summary>Answer</summary>
 
-No. Only the animal part was copied, so `copy` is a plain `Animal`. This is object slicing.
+No. The copy is only a base ticket, which has no price operation in this chapter. This is object slicing.
 
 </details>
 
-**Should `Dog` inherit from `Collar`?**
+**Should `AdmissionTicket` inherit from `std::string` to store the name?**
 
 <details>
 <summary>Answer</summary>
 
-No. A dog has a collar; it is not a collar. Use composition for that relationship.
+No. A ticket has a name; it is not a string. Store the string as a member using composition.
 
 </details>
 
@@ -348,13 +381,13 @@ No. A dog has a collar; it is not a collar. Use composition for that relationshi
 <details>
 <summary>Answer</summary>
 
-No. `eat()` is one shared, non-virtual function. Inheritance does not automatically make functions virtual.
+No. Inherited functions are not automatically virtual. The next note makes the price request virtual so the receipt can use it through the base type.
 
 </details>
 
 ## 8. TL;DR
 
-Inheritance lets a derived class reuse and extend a base class. `Dog` is an `Animal`: it inherits the name and `eat()`, adds `bark()`, and can be passed wherever an `Animal&` is expected. Build the base part in the derived constructor, keep base data private, and pass objects by reference to avoid slicing. Use public inheritance for a real "is-a" relationship and composition for "has-a".
+Inheritance lets a derived class reuse and extend a base. Adult and child tickets inherit the visitor from `AdmissionTicket` and supply their own price operations. Build the base part in each derived constructor, keep its data private, and use references to avoid slicing. Use public inheritance for "is-a" and composition for "has-a".
 
 ## Sources and further reading
 

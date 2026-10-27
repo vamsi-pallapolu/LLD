@@ -1,7 +1,8 @@
 Teach me <TOPIC> in C++ so I clearly understand its *intent* (why it exists and what problem it solves), not just the syntax.
 
 - Research it online, use reputable sources (e.g., Wikipedia, C++ Core Guidelines, Martin Fowler), and cite them with links at the end.
-- Don't reuse any examples from this project. Write fresh, simple, real-world examples.
+- When starting a new learning series, choose a fresh, simple, real-world example instead of copying unrelated project examples. Within a related series, reuse that same example throughout for consistent learning.
+- Keep the same example domain, names, values, and operations across explanations, analogies, code, comparisons, and self-tests in related Markdown notes. Evolve the example step by step and explain design changes between topics. For resources/OOPS/, continue using museum admission tickets: AdmissionTicket, AdultTicket for Maya (1500 cents), ChildTicket for Leo (800 cents), and SeniorTicket for Nora (1000 cents).
 - In Markdown files under resources/, use standard textbook-style definitions with accurate technical terminology. Follow each formal definition with a plain-language explanation, and keep terminology consistent throughout the notes.
 - Use plain, simple language and make explanations easy to understand on their own. Avoid complex terminology and unnecessary jargon. When a technical term or C++ keyword is needed, explain it in everyday words where it first appears. Walk through code step by step without assuming I already know the concept.
 - Structure: a one-line definition → a real-world analogy → a bad vs. good code comparison → the key intents → common mistakes → a short design checklist → a self-test with hidden answers → a TL;DR.

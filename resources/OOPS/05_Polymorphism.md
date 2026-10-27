@@ -4,7 +4,9 @@
 
 In plain language, you write one request, such as "tell me your price", and send it to different kinds of objects. Each kind answers in its own way. The code making the request does not need to know which kind it is talking to.
 
-C++ supports polymorphism in two ways: some choices are made while the program is compiled, and some while it runs. This note starts with the runtime kind, which uses **virtual functions**. It builds on the base and derived classes from [Inheritance](04_Inheritance.md).
+C++ supports polymorphism in two ways: some choices are made while the program is compiled, and some while it runs. This note starts with the runtime kind, which uses **virtual functions**. It builds on the same museum tickets from [Inheritance](04_Inheritance.md): `AdultTicket` for Maya (1500 cents) and `ChildTicket` for Leo (800 cents), followed by `SeniorTicket` for Nora (1000 cents).
+
+The inheritance note shared `visitor()` but defined prices only in the derived classes. This note adds `virtual priceCents()` to `AdmissionTicket`, making the base abstract, and adds a virtual destructor. We can now use the `printReceipt()` function from [Abstraction](03_Abstraction.md) unchanged with every ticket category. Each complete program below is a standalone version.
 
 ## 1. A real-world analogy: museum tickets
 
@@ -152,7 +154,7 @@ Prices are stored as whole cents so the example avoids decimal rounding problems
 | `virtual ~AdmissionTicket() = default` | Make cleanup work correctly even if a ticket is deleted through an `AdmissionTicket` pointer |
 | `protected:` | Only this class and classes derived from it can use the constructor; outside code cannot create a plain `AdmissionTicket` |
 
-**An abstract class is a class that cannot be instantiated directly.** In plain language, you cannot create an object of it, because some of its functions have no body yet. `AdmissionTicket` is abstract because `priceCents()` is pure virtual. `AdultTicket` and `ChildTicket` are **concrete** classes: they fill in the missing function, so you can create them.
+**An abstract class is a class that cannot be instantiated directly.** In this example, you cannot create a base object because its pure virtual price operation has not been implemented by a concrete type. `AdmissionTicket` is abstract because `priceCents()` is pure virtual. `AdultTicket` and `ChildTicket` are **concrete** classes: they fill in the missing function, so you can create them.
 
 ### Follow the first call
 
@@ -226,7 +228,7 @@ Polymorphism only works if each version of `priceCents()` means the same thing. 
 
 | Concept | Purpose | In this example |
 |---------|---------|-----------------|
-| [Encapsulation](02_Encapsulation.md) | Bundle data and methods with controlled access to internal state | The visitor name is private and read through `visitor()` |
+| [Encapsulation](02_Encapsulation.md) | Bundle data and methods with controlled access to internal state | The visitor name stays private; the earlier editable-price version also checked price changes |
 | [Abstraction](03_Abstraction.md) | Expose essential features while hiding unnecessary implementation details | Receipt code needs a name and a price, not how the price is worked out |
 | [Inheritance](04_Inheritance.md) | Define a specific type from a general type | `AdultTicket` derives from `AdmissionTicket` |
 | Polymorphism | Use one interface with type-specific behavior | `priceCents()` runs the actual ticket's version |
@@ -250,34 +252,34 @@ These two words sound alike but are unrelated.
 
 **Function overloading is the declaration of multiple functions with the same name but different parameter lists.** The compiler picks one by looking at the arguments. A different return type alone is not enough.
 
-This separate, complete example prints a museum label by number or by name:
+This separate, complete example prints a ticket label by number or by visitor name:
 
 ```cpp
 #include <iostream>
 #include <string>
 
-void printLabel(int exhibitNumber) {
-    std::cout << "Exhibit number: " << exhibitNumber << '\n';
+void printLabel(int ticketNumber) {
+    std::cout << "Ticket number: " << ticketNumber << '\n';
 }
 
-void printLabel(const std::string& exhibitName) {
-    std::cout << "Exhibit name: " << exhibitName << '\n';
+void printLabel(const std::string& visitor) {
+    std::cout << "Visitor: " << visitor << '\n';
 }
 
 int main() {
     printLabel(42);
-    printLabel(std::string("Fossils"));
+    printLabel(std::string("Maya"));
 }
 ```
 
 Output:
 
 ```text
-Exhibit number: 42
-Exhibit name: Fossils
+Ticket number: 42
+Visitor: Maya
 ```
 
-`42` is an `int`, so the first version runs. `"Fossils"` is a string, so the second runs. No base class or virtual function is involved.
+`42` is an `int`, so the first version runs. `std::string("Maya")` is a `std::string`, so the second runs. No base class or virtual function is involved.
 
 **Function overriding is the provision, in a derived class, of a new implementation of an inherited virtual function with the same signature.** In plain language, the derived class replaces the base class's version of a virtual function. The name, parameters and trailing `const` must match. `AdultTicket::priceCents() const` overrides `AdmissionTicket::priceCents() const` [3].
 
