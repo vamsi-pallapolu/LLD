@@ -1,18 +1,34 @@
 # Polymorphism: One Request, Many Behaviors
 
-**Polymorphism is the provision of a common interface to entities of different types, allowing the same operation to have type-specific behavior.**
+**Polymorphism lets the same function call produce the answer supplied by the object's own class.** A receipt asks `priceCents()` on an admission ticket. An adult ticket returns 1500; a child ticket returns 800.
 
-In plain language, you write one request, such as "tell me your price", and send it to different kinds of objects. Each kind answers in its own way. The code making the request does not need to know which kind it is talking to.
+The receipt uses the same request for both tickets. It does not need an `if` statement to choose the adult or child price.
 
-C++ supports polymorphism in two ways: some choices are made while the program is compiled, and some while it runs. This note starts with the runtime kind, which uses **virtual functions**. It builds on the same museum tickets from [Inheritance](04_Inheritance.md): `AdultTicket` for Maya (1500 cents) and `ChildTicket` for Leo (800 cents), followed by `SeniorTicket` for Nora (1000 cents).
+C++ can choose a function before a program runs, during compilation, or while the program is running. This chapter starts with the second kind, called **runtime polymorphism**. A **virtual function** lets a call through a base reference use the version provided by the actual object.
 
-The inheritance note shared `visitor()` but defined prices only in the derived classes. This note adds `virtual priceCents()` to `AdmissionTicket`, making the base abstract, and adds a virtual destructor. We can now use the `printReceipt()` function from [Abstraction](03_Abstraction.md) unchanged with every ticket category. Each complete program below is a standalone version.
+We use the same tickets from [Inheritance](04_Inheritance.md): Maya's `AdultTicket` costs 1500 cents, Leo's `ChildTicket` costs 800 cents, and Nora's later `SeniorTicket` costs 1000 cents.
+
+The inheritance chapter shared the visitor name and entrance rule. Adult and child classes supplied their own price functions, so a base reference could not ask for a price yet.
+
+Here, the base declares a virtual price function, and each ticket class supplies its answer. We can then use the receipt function from [Abstraction](03_Abstraction.md) for every category. Each complete program is independent and focuses on pricing; it leaves out entrance and tour tracking.
+
+
+## Contents
+
+1. [A real-world analogy: museum tickets](#1-a-real-world-analogy-museum-tickets)
+2. [Bad vs. good: where should the price decision live?](#2-bad-vs-good-where-should-the-price-decision-live)
+3. [The key intents](#3-the-key-intents)
+4. [Compile-time and runtime polymorphism](#4-compile-time-and-runtime-polymorphism)
+5. [Common mistakes](#5-common-mistakes)
+6. [A short design checklist](#6-a-short-design-checklist)
+7. [Self-test](#7-self-test)
+8. [Short recap](#8-short-recap)
 
 ## 1. A real-world analogy: museum tickets
 
 A museum sells adult tickets and child tickets. Both are admission tickets, and both have a visitor's name and a price. Their prices differ.
 
-At the entrance, the attendant asks any ticket, "What is your price?" The attendant does not keep a list of categories and prices. The ticket itself knows the answer.
+At the receipt counter, the printer asks a ticket, "What is your price?" The ticket supplies its category's answer. The printer does not keep its own list of adult and child prices.
 
 - **Inheritance:** an adult ticket and a child ticket are both kinds of admission ticket.
 - **Polymorphism:** asking any ticket for its price gives the right price for that ticket.
@@ -21,7 +37,7 @@ In this example, assume the ticket category was chosen correctly at purchase. We
 
 ## 2. Bad vs. good: where should the price decision live?
 
-### A design that spreads category checks
+### 2.1 A design that spreads category checks
 
 This complete program works for two categories:
 
@@ -67,13 +83,25 @@ Leo: 800 cents
 
 The receipt function must know every category and its price. Now imagine refunds and sales reports need prices too. Each of them would copy the same `if` chain, and adding a category would mean finding and updating every copy. A typo such as `"adlut"` is also accepted when a ticket is created, and only fails later.
 
-One small `if` is not automatically a problem. If categories differ only by a number, a simple lookup table may be enough. Polymorphism becomes worthwhile when each kind has its own *behavior* and several parts of the program need it. This small pricing example keeps the mechanism easy to see.
+An `if` statement can be fine for a small, fixed set of prices. A table mapping categories to numbers can also be enough when only the data differs.
 
-### A design with a common base class
+Virtual functions become useful when categories calculate their answers differently and several callers need those answers. We keep the returns as constants here so you can focus on how C++ chooses the right function.
 
-As in the inheritance note, `AdmissionTicket` is the **base class** (the general type), and `AdultTicket` and `ChildTicket` are **derived classes** (the specific types).
+### 2.2 A design with a common base class
 
-This complete program produces the same output. It requires C++11 or later.
+`AdmissionTicket` is the **base class**, which declares the functions shared by every ticket. `AdultTicket` and `ChildTicket` are **derived classes**, which build on that base and supply their own price functions.
+
+This complete C++11 program produces the same receipts. The important new words are:
+
+- `virtual`: let a call through a base reference choose the actual ticket's function.
+- `= 0`: the base requires a price function but supplies no answer of its own.
+- `override`: check that the derived price function correctly replaces the base's virtual function.
+
+Because the base leaves the price unanswered, it is an **abstract class**: you can create adult and child tickets, but not a plain `AdmissionTicket`. The code uses base references to read those actual tickets.
+
+A **reference**, written with `&`, uses an existing object instead of making a copy. `const AdmissionTicket&` lets the receipt read the original ticket without changing it. The public functions it can call are the ticket's **interface**.
+
+The trailing `const` on `priceCents()` means that asking for the price does not change the ticket's stored fields. `: AdmissionTicket(visitor)` passes the name to the base constructor, which sets up the shared part of the ticket.
 
 ```cpp
 #include <iostream>
@@ -140,23 +168,27 @@ Leo: 800 cents
 
 Prices are stored as whole cents so the example avoids decimal rounding problems.
 
-### Read the new syntax
+### 2.3 Read the new syntax
 
 `: public AdmissionTicket` means "is a kind of `AdmissionTicket`", as explained in [Inheritance](04_Inheritance.md). The other parts:
 
 | Code | Plain meaning |
 |------|---------------|
 | `: AdmissionTicket(visitor)` | Build the base part of the ticket first, passing it the visitor's name |
-| `private: std::string visitor_` | Only `AdmissionTicket` itself can touch the name; derived tickets read it through `visitor()` |
+| `private: std::string visitor_` | Store the name privately in the base; adult and child functions read it through `visitor()` |
 | `virtual int priceCents() const` | When called through an `AdmissionTicket&`, use the version belonging to the actual ticket |
-| `= 0` | The base class gives no price of its own; every concrete ticket type must supply one. This is called a **pure virtual function** |
+| `= 0` | Require derived ticket classes to supply this function before objects of those classes can be created; this declaration is a **pure virtual function** |
 | `override` | Ask the compiler to confirm this function really replaces a virtual function from the base class |
-| `virtual ~AdmissionTicket() = default` | Make cleanup work correctly even if a ticket is deleted through an `AdmissionTicket` pointer |
-| `protected:` | Only this class and classes derived from it can use the constructor; outside code cannot create a plain `AdmissionTicket` |
+| `virtual ~AdmissionTicket() = default` | Use C++'s generated destructor and make deletion through a base pointer clean up the actual ticket type |
+| `protected:` | Let derived ticket constructors call this base constructor while preventing outside code from calling it directly |
 
-**An abstract class is a class that cannot be instantiated directly.** In this example, you cannot create a base object because its pure virtual price operation has not been implemented by a concrete type. `AdmissionTicket` is abstract because `priceCents()` is pure virtual. `AdultTicket` and `ChildTicket` are **concrete** classes: they fill in the missing function, so you can create them.
+`AdultTicket` and `ChildTicket` are **concrete classes**, meaning you can create objects from them. Each supplies the missing `priceCents()` function.
 
-### Follow the first call
+`protected` controls who may call the constructor; `= 0` makes the class abstract. Even making the base constructor public would not let you create a plain admission object while its price function remains pure virtual.
+
+A **destructor** is the cleanup function whose name begins with `~`. A **pointer** stores an object's address. The virtual destructor matters if a base pointer later deletes an adult or child ticket; section 5 explains that case.
+
+### 2.4 Follow the first call
 
 1. `AdultTicket adult("Maya")` creates an adult ticket. Its base part stores `"Maya"`.
 2. `printReceipt(adult)` receives the ticket as `const AdmissionTicket&`. It refers to the existing adult ticket; nothing is copied.
@@ -164,16 +196,16 @@ Prices are stored as whole cents so the example avoids decimal rounding problems
 4. `ticket.priceCents()` is virtual. C++ checks what kind of ticket this really is, finds an `AdultTicket`, and runs `AdultTicket::priceCents()`, which returns 1500.
 5. Passing `child` to the same function runs `ChildTicket::priceCents()` instead.
 
-**Dynamic dispatch is the selection, at runtime, of a virtual function's implementation according to the object's dynamic type.** In plain language, C++ waits until the program runs and then picks the version of the function that belongs to the actual object.
+**Dynamic dispatch** means choosing a virtual function's version while the program runs, based on the actual object. For `printReceipt(adult)`, C++ chooses the adult price function; for `printReceipt(child)`, it chooses the child price function.
 
 Two terms help here:
 
 - The **static type** is the type written in the code: `printReceipt` declares its parameter as `const AdmissionTicket&`.
 - The **dynamic type** is the type of the object that actually arrives: `AdultTicket` on the first call, `ChildTicket` on the second.
 
-A virtual call follows the dynamic type. An ordinary call, such as `visitor()`, follows the static type.
+For `ticket.priceCents()`, `virtual` makes the actual object type choose the answer. For the non-virtual `ticket.visitor()`, the admission reference uses the function declared in `AdmissionTicket`.
 
-### Add a new category
+### 2.5 Add a new category
 
 Place this class before `main()` in the good program:
 
@@ -200,44 +232,48 @@ The extra output is `Nora: 1000 cents`. **`printReceipt()` did not change.** Onl
 
 ## 3. The key intents
 
-### Replace repeated type checks with one request
+### 3.1 Replace repeated type checks with one request
 
-The bad design asks "which category is this?" and then decides. The good design simply asks "what is your price?" and trusts the answer.
+The first design makes the receipt choose a price by checking the category. The second design lets the ticket answer, so the receipt can just call `priceCents()`.
 
-**Replace Conditional with Polymorphism** is a well-known refactoring that turns an `if`/`switch` on an object's type into a virtual function on each type [1]. In plain language: instead of the caller choosing the behavior, each type carries its own.
+**Replace Conditional with Polymorphism** is the name for moving repeated category checks into functions supplied by each class [1]. For tickets, the receipt's adult-or-child `if` becomes the `priceCents()` functions in the adult and child classes.
 
-### Add new kinds without editing working code
+### 3.2 Add new kinds without editing working code
 
-**The open–closed principle states that software entities should be open for extension but closed for modification** [2]. In plain language, you should be able to add new behavior by adding new code, not by rewriting code that already works.
+The **open–closed principle** encourages adding a new case without rewriting the code that already handles existing cases [2]. Here, we add a senior class instead of editing the receipt's price logic.
 
-Adding `SeniorTicket` is an example: we added a class and left `printReceipt()` alone. Every function written against `AdmissionTicket` gains senior tickets for free.
+Adding `SeniorTicket` leaves `printReceipt()` unchanged. Other functions using the same base name and price requests can accept a senior ticket too, as long as it keeps those functions' promises.
 
-### Keep each kind's behavior with that kind
+### 3.3 Keep each kind's behavior with that kind
 
-The adult price lives in `AdultTicket`. To change it, you look in one obvious place, not in every receipt, refund and report function.
+The adult price is returned in `AdultTicket::priceCents()`. Receipt, refund, and report code can all call that function, so changing the adult rule requires one pricing edit.
 
-### Let callers depend on the general type
+### 3.4 Let callers depend on the general type
 
 `printReceipt()` only knows `AdmissionTicket`. That also makes testing easier: you can pass a pretend ticket with a known price and check the receipt.
 
-### Every version must keep the same promise
+That test ticket would derive from `AdmissionTicket` and override `priceCents()` to return a chosen value. This lets a test check receipt formatting independently of real pricing rules.
+
+This base both stores the visitor name and declares a virtual price request. Another design could use a base that only declares requests and stores no ticket fields. Such a class is often called an **interface class**. Use that design when you need to share the requests without sharing stored data.
+
+### 3.5 Every version must keep the same promise
 
 Polymorphism only works if each version of `priceCents()` means the same thing. Suppose the base promises "a price in cents, zero or more, without changing the ticket". A derived ticket that returned dollars would compile but give wrong receipts. This rule is the **Liskov Substitution Principle**, covered in [Inheritance](04_Inheritance.md).
 
-### How the four ideas fit together
+### 3.6 How the four ideas fit together
 
 | Concept | Purpose | In this example |
 |---------|---------|-----------------|
-| [Encapsulation](02_Encapsulation.md) | Bundle data and methods with controlled access to internal state | The visitor name stays private; the earlier editable-price version also checked price changes |
-| [Abstraction](03_Abstraction.md) | Expose essential features while hiding unnecessary implementation details | Receipt code needs a name and a price, not how the price is worked out |
+| [Encapsulation](02_Encapsulation.md) | Control how callers access stored data | The visitor name stays private; the earlier editable-price version also checked price changes |
+| [Abstraction](03_Abstraction.md) | Let callers request a result without learning how it is produced | Receipt code needs a name and a price, not how the price is worked out |
 | [Inheritance](04_Inheritance.md) | Define a specific type from a general type | `AdultTicket` derives from `AdmissionTicket` |
-| Polymorphism | Use one interface with type-specific behavior | `priceCents()` runs the actual ticket's version |
+| Polymorphism | Let the same base request get each ticket class's own answer | `priceCents()` runs the actual ticket's version |
 
 ## 4. Compile-time and runtime polymorphism
 
-**Compile-time polymorphism is polymorphism in which the applicable operation is determined during compilation.** In plain language, the compiler picks which function to call before the program ever runs. C++ supports it through function overloading, operator overloading and templates.
+**Compile-time polymorphism** means choosing the function while the code is being compiled, before the program runs. Function overloading, operator overloading, and templates let C++ make this choice.
 
-**Runtime polymorphism is polymorphism in which the applicable operation is determined during execution according to the object's dynamic type.** In plain language, the choice is made while the program runs, based on the real object. The ticket program uses this form.
+**Runtime polymorphism** means choosing a virtual function's version while the program runs. Our receipt does this when it calls `priceCents()` through an admission reference.
 
 | Form | What it does | Needs inheritance? |
 |------|--------------|--------------------|
@@ -246,11 +282,11 @@ Polymorphism only works if each version of `priceCents()` means the same thing. 
 | Templates | Write code once and let the compiler produce a version for each type | No |
 | Virtual functions | Pick the actual object's version of a function while running | Yes |
 
-### Overloading is different from overriding
+### 4.1 Overloading is different from overriding
 
-These two words sound alike but are unrelated.
+Overloading gives one name to functions taking different arguments. Overriding supplies a derived version of a virtual base function. The examples below show why the distinction matters.
 
-**Function overloading is the declaration of multiple functions with the same name but different parameter lists.** The compiler picks one by looking at the arguments. A different return type alone is not enough.
+**Function overloading** means defining functions with the same name but different input parameters. The compiler uses the supplied inputs to choose one. Changing only the return type does not create a valid overload.
 
 This separate, complete example prints a ticket label by number or by visitor name:
 
@@ -281,43 +317,51 @@ Visitor: Maya
 
 `42` is an `int`, so the first version runs. `std::string("Maya")` is a `std::string`, so the second runs. No base class or virtual function is involved.
 
-**Function overriding is the provision, in a derived class, of a new implementation of an inherited virtual function with the same signature.** In plain language, the derived class replaces the base class's version of a virtual function. The name, parameters and trailing `const` must match. `AdultTicket::priceCents() const` overrides `AdmissionTicket::priceCents() const` [3].
+**Function overriding** means supplying a derived-class version of a virtual base function [3]. Here, the function name, parameters, and trailing `const` must match. `AdultTicket::priceCents() const` is the adult version of the base request.
+
+`printLabel(int)` and `printLabel(const std::string&)` are overloads because their inputs differ. Adult and child `priceCents()` functions are overrides because each replaces the same virtual base request.
 
 ## 5. Common mistakes
 
-### Forgetting `virtual` in the base class
+### 5.1 Forgetting `virtual` in the base class
 
 If the base function is not virtual, a same-named function in a derived class does **not** replace it for calls through the base. `printReceipt()` would always call the base version. Inheritance alone does not make a function virtual.
 
-### Leaving out `override`
+### 5.2 Leaving out `override`
 
 Suppose you accidentally write `int priceCents() override` in `ChildTicket`, forgetting `const`. Because of `override`, the compiler reports an error: there is no matching base function to replace.
 
-Without `override`, the compiler would quietly treat it as a brand-new function. Here `ChildTicket` would then be abstract, and creating one would fail with a confusing error. In a base with a default implementation, the wrong function would run silently. Always write `override` [4].
+Without `override`, the missing-`const` function becomes a separate function. It does not supply the base's required price function, so this `ChildTicket` stays abstract and cannot be created.
 
-### Passing polymorphic objects by value
+If the base had its own price answer instead of `= 0`, a call through the base would keep using that answer. Writing `override` catches the mismatch at the derived declaration [4].
+
+### 5.3 Passing polymorphic objects by value
 
 `printReceipt(const AdmissionTicket& ticket)` works with the real ticket. If a function instead took a base-class object by value, C++ would copy only the base part and lose the derived part.
 
-**Object slicing is the loss of the derived-class portion when a derived object is copied into a base-class object by value.** In plain language, the copy is just a plain base object, so virtual calls on it run the base version, not the derived one.
+**Object slicing** means a base-class copy leaves out the derived class's fields and type. In a hierarchy with a concrete base, the copy would become a plain base object, so its virtual calls would use the base's answers.
 
 In our example, `void printReceipt(AdmissionTicket ticket)` does not even compile, because you cannot create an abstract `AdmissionTicket`. Pass polymorphic objects by reference or pointer [5].
 
-### Missing a virtual destructor
+### 5.4 Missing a virtual destructor
 
 A **destructor** is the cleanup function that runs when an object goes away. If a program creates an `AdultTicket` with `new` and later deletes it through an `AdmissionTicket*`, the base destructor must be virtual. Otherwise the behavior is **undefined**: C++ makes no promise about what happens.
 
 The same applies to `std::unique_ptr<AdmissionTicket>`, a smart pointer that deletes the ticket for you. Our example uses local objects, but the virtual destructor keeps the class safe for those other uses [6].
 
-### Calling virtual functions from the base constructor
+### 5.5 Calling virtual functions from the base constructor
 
-While the `AdmissionTicket` part is being built, the `AdultTicket` part does not exist yet. A virtual call made inside the base constructor or destructor will **not** reach the derived version. Calling the pure virtual `priceCents()` there is undefined behavior [3].
+During the base constructor, the adult portion is not ready yet. During the base destructor, the adult portion has already been cleaned up. A virtual call made from either base function therefore uses the base's version.
 
-### Bringing the type checks back
+Our base has no price answer because `priceCents()` is pure virtual. Calling that pure virtual function from the base constructor or destructor has undefined behavior [3]. Keep price requests outside those functions.
 
-If callers start asking "is this an `AdultTicket`?" before doing their work, the base class is probably missing an operation. Add that operation as a virtual function instead. Code that *creates* tickets still has to choose a category; that is expected.
+### 5.6 Bringing the type checks back
 
-### Using polymorphism where a value would do
+If receipt or refund code checks the ticket category just to calculate a price, let it call the virtual price function instead. If another shared request needs different answers per ticket, consider declaring that request in the base too.
+
+Code that creates tickets still chooses which class to construct. For example, the purchase step creates an `AdultTicket` when the buyer selects adult admission.
+
+### 5.7 Using polymorphism where a value would do
 
 If adult, child and senior tickets differ only by a number, a single `Ticket` class with a `priceCents_` member, or a lookup table, is simpler. Use virtual functions when the kinds actually *behave* differently.
 
@@ -328,8 +372,8 @@ If adult, child and senior tickets differ only by a number, a single `Ticket` cl
 3. Check that the kinds really behave differently; otherwise store a value instead.
 4. Make the request `virtual` in the base class, and use `override` in each derived class.
 5. Give the base class a virtual destructor if objects may be deleted through a base pointer.
-6. Pass objects by reference or pointer, never by base-class value.
-7. Make sure callers use only the base class's operations, with no type checks.
+6. Use a base reference or pointer when a function must keep the actual ticket type.
+7. Let receipt code ask for the price instead of checking whether the ticket is adult or child.
 8. Try adding a new kind: only the new class and the creation code should change.
 
 ## 7. Self-test
@@ -348,7 +392,7 @@ Inheritance defines a specific type from a general one. Polymorphism lets one re
 <details>
 <summary>Answer</summary>
 
-The reference refers to the real `ChildTicket`, and `priceCents()` is virtual. Dynamic dispatch follows the object's dynamic type and runs `ChildTicket::priceCents()`.
+The reference refers to the real `ChildTicket`, and `priceCents()` is virtual. C++ sees that the original object is a child ticket and calls `ChildTicket::priceCents()`, which returns 800.
 
 </details>
 
@@ -357,7 +401,7 @@ The reference refers to the real `ChildTicket`, and `priceCents()` is virtual. D
 <details>
 <summary>Answer</summary>
 
-Compilation fails. The signature does not match the base's `const` function, and `override` requires a real match. Without `override`, the mistake would be easier to miss.
+Compilation fails because the base function ends in `const` and the derived declaration does not. `override` makes the compiler report that mismatch immediately.
 
 </details>
 
@@ -397,9 +441,9 @@ Overloading means several same-named functions with different parameters; the co
 
 </details>
 
-## 8. TL;DR
+## 8. Short recap
 
-Polymorphism lets one request produce type-specific behavior, so callers stop checking types. C++ chooses at compile time through overloading and templates, and at runtime through virtual functions. Make the base operation `virtual`, mark derived versions `override`, pass objects by reference or pointer, and give the base a virtual destructor. Every version must keep the same promise.
+The receipt asks every ticket for its price through `AdmissionTicket&`. `virtual` makes that request use the actual ticket's answer, and `override` checks each derived declaration. Adding a senior ticket leaves the receipt unchanged.
 
 ## Sources and further reading
 

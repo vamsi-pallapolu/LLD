@@ -1,30 +1,40 @@
-# `explicit`: No Silent Conversions
+# `explicit`: Make Object Creation Visible
 
-**The `explicit` specifier declares that a constructor or conversion function cannot be used for implicit conversions or copy-initialization** [1].
+**`explicit` prevents C++ from using a constructor to automatically turn a supplied value into an object of your class** [1]. You can still create the object by writing its type and arguments directly.
 
-In plain language, `explicit` stops C++ from **silently turning a value into an object of your class**. The object can still be created, but only when you ask for it by name.
+For example, a `TicketNumber` gives meaning to the number 42. With an explicit constructor, `printLabel(42)` is rejected, while `printLabel(TicketNumber(42))` clearly asks to create a ticket number.
 
-## 1. A real-world analogy: a currency exchange counter
+This note uses museum tickets, matching the examples in the [OOP notes](../OOPS/01_ClassesAndObjects.md). Each complete program is independent and requires C++11 or newer.
 
-Imagine a shop that only accepts euros. You hand over dollars. A helpful cashier could quietly convert them at some rate and carry on, and you might never notice what happened or what rate was used.
+## Contents
 
-A careful shop says instead: "Please exchange your money at the counter first." The conversion still happens, but **you** choose it and you can see it.
+1. [The problem: a value becomes an object automatically](#1-the-problem-a-value-becomes-an-object-automatically)
+2. [Without explicit vs. with explicit](#2-without-explicit-vs-with-explicit)
+3. [Which ways of creating an object still work?](#3-which-ways-of-creating-an-object-still-work)
+4. [A temporary ticket can give the wrong answer](#4-a-temporary-ticket-can-give-the-wrong-answer)
+5. [Other places explicit can be used](#5-other-places-explicit-can-be-used)
+6. [Common mistakes](#6-common-mistakes)
+7. [Checklist and self-test](#7-checklist-and-self-test)
+8. [Short recap](#8-short-recap)
 
-- A constructor **without** `explicit` is the helpful cashier: it converts silently.
-- A constructor **with** `explicit` is the careful shop: you must write the conversion yourself.
+## 1. The problem: a value becomes an object automatically
 
-## 2. Bad vs. good
+A **constructor** sets up a new object. A constructor that accepts one argument can also let C++ create an object automatically when a function needs that object's type.
 
-### Without `explicit`: C++ converts behind your back
+An **implicit conversion** is a conversion C++ performs without you writing the object creation. If `printLabel()` needs a `TicketNumber` and you pass the integer `42`, C++ may create `TicketNumber(42)` for you.
 
-A constructor that can be called with **one argument** also acts as a conversion rule. If C++ needs a `Seconds` but finds an `int`, it quietly calls the constructor.
+Think of the museum counter: a number can identify a ticket, but it is useful for code to say clearly that it is passing a ticket number. `explicit` makes that choice visible.
+
+## 2. Without explicit vs. with explicit
+
+### 2.1 Without explicit: the constructor allows automatic conversion
 
 ```cpp
 #include <iostream>
 
-class Seconds {
+class TicketNumber {
 public:
-    Seconds(int value) : value_(value) {}
+    TicketNumber(int value) : value_(value) {}
 
     int value() const {
         return value_;
@@ -34,43 +44,43 @@ private:
     int value_;
 };
 
-void wait(Seconds duration) {
-    std::cout << "Waiting " << duration.value() << " seconds\n";
+void printLabel(TicketNumber number) {
+    std::cout << "Ticket number: " << number.value() << '\n';
 }
 
 int main() {
-    wait(5);           // Compiles: C++ secretly runs Seconds(5).
-    Seconds s = 10;    // Compiles: same secret conversion.
-    wait(s);
+    printLabel(42);          // C++ creates TicketNumber(42) for this call.
+    TicketNumber number = 7; // C++ converts 7 into a new TicketNumber.
+    printLabel(number);
 }
 ```
 
 Output:
 
 ```text
-Waiting 5 seconds
-Waiting 10 seconds
+Ticket number: 42
+Ticket number: 7
 ```
 
-Step by step, this is what C++ does with `wait(5)`:
+Here is what `printLabel(42)` does:
 
-1. `wait` needs a `Seconds`.
-2. You passed `5`, which is an `int`.
-3. `Seconds` has a constructor that accepts an `int`.
-4. C++ silently creates `Seconds(5)` and passes it in.
+1. The function parameter requires a `TicketNumber`.
+2. The supplied value, `42`, is an `int`.
+3. The constructor accepts an `int`, so C++ uses it to create a `TicketNumber`.
+4. The function receives that new object and reads its value.
 
-The whole point of a `Seconds` type is to make units clear. Yet `wait(5)` gives a reader no clue: 5 seconds? 5 minutes? 5 milliseconds? The silent conversion undoes the safety the type was meant to add.
+Nothing is necessarily wrong with this output. The design question is whether you want a plain number to be accepted automatically wherever a ticket number is expected.
 
-### With `explicit`: you must ask for the conversion
+### 2.2 With explicit: write the object creation yourself
 
-Add one word to the constructor:
+The only class change is adding `explicit` before its constructor:
 
 ```cpp
 #include <iostream>
 
-class Seconds {
+class TicketNumber {
 public:
-    explicit Seconds(int value) : value_(value) {}
+    explicit TicketNumber(int value) : value_(value) {}
 
     int value() const {
         return value_;
@@ -80,266 +90,305 @@ private:
     int value_;
 };
 
-void wait(Seconds duration) {
-    std::cout << "Waiting " << duration.value() << " seconds\n";
+void printLabel(TicketNumber number) {
+    std::cout << "Ticket number: " << number.value() << '\n';
 }
 
 int main() {
-    wait(Seconds(5));  // OK: the conversion is written out.
-    Seconds s(10);     // OK: direct construction.
-    wait(s);
+    printLabel(TicketNumber(42)); // The type name makes object creation clear.
+    TicketNumber number(7);      // Directly create the named object.
+    printLabel(number);
 
-    // wait(5);        // Error: no silent conversion from int.
-    // Seconds t = 10; // Error: "=" form needs an implicit conversion.
+    // printLabel(42);          // Error: this needs an automatic conversion.
+    // TicketNumber other = 7; // Error: this form cannot use the explicit constructor.
 }
 ```
 
 Output:
 
 ```text
-Waiting 5 seconds
-Waiting 10 seconds
+Ticket number: 42
+Ticket number: 7
 ```
 
-### What changes
+`explicit` changes which calls compile. It does not change the stored number or the printed labels.
 
-| Code | Without `explicit` | With `explicit` |
-|------|--------------------|-----------------|
-| `wait(5);` | Compiles silently | **Error** |
-| `Seconds s = 10;` | Compiles silently | **Error** |
-| `wait(Seconds(5));` | Compiles | Compiles |
-| `Seconds s(10);` | Compiles | Compiles |
-| `Seconds s{10};` | Compiles | Compiles |
+### 2.3 Read the syntax
 
-**`explicit` never stops you from creating an object.** It only stops C++ from creating one *for* you without being asked.
+| Code | Meaning |
+|------|---------|
+| `explicit TicketNumber(int value)` | Require callers to deliberately create a ticket number from an integer |
+| `: value_(value)` | Give the stored field the supplied starting value |
+| `private: int value_` | Keep the number in a field callers cannot edit directly |
+| `int value() const` | Return a copy of the number without changing the object |
+| `printLabel(TicketNumber number)` | Accept a ticket-number object by value |
+| `std::cout << ...` | Print the supplied values |
+| `'\n'` | Start the next output line |
 
-### Two forms of initialization
+`value_` is the stored number; `value` is the constructor input. The trailing `_` is a naming convention, not a language requirement.
 
-These terms explain the `=` row in the table:
+## 3. Which ways of creating an object still work?
 
-- **Direct-initialization** is initialization in which the constructor arguments are given directly, as in `Seconds s(10);` or `Seconds s{10};`. You name the type and its arguments, so `explicit` constructors are allowed.
-- **Copy-initialization** is initialization from a value of another form, as in `Seconds s = 10;` or passing `5` to a `Seconds` parameter. C++ must *convert* the value, so `explicit` constructors are not considered [2].
+### 3.1 Direct creation works with explicit
 
-## 3. A sneakier bug: a temporary object
+Using the explicit class above:
 
-This one prints the right text and is still wrong:
+| Code | Compiles? | Why? |
+|------|-----------|------|
+| `TicketNumber number(42);` | Yes | The type and constructor argument are written directly |
+| `TicketNumber number{42};` | Yes | Braces also directly supply the constructor argument |
+| `printLabel(TicketNumber(42));` | Yes | The call explicitly creates a ticket-number object |
+| `TicketNumber number = 42;` | No | This form asks C++ to convert the plain integer automatically |
+| `printLabel(42);` | No | The argument needs an automatic integer-to-ticket conversion |
+| `TicketNumber number = TicketNumber(42);` | Yes | The value on the right is already a deliberately created ticket number |
+
+These are separate alternatives; do not declare the same variable repeatedly in one scope.
+
+### 3.2 Initialization names describe these forms
+
+**Initialization** means giving a newly created variable its starting value.
+
+- **Direct initialization:** `TicketNumber number(42)` or `TicketNumber number{42}` directly gives the constructor its argument. An explicit constructor is allowed.
+- **Copy initialization:** `TicketNumber number = 42` asks C++ to initialize from the value on the right. An explicit constructor cannot perform that integer-to-ticket conversion [2].
+
+The `=` symbol alone does not mean explicit constructors are always forbidden. `TicketNumber number = TicketNumber(42)` works because the right-hand expression already creates the correct type.
+
+## 4. A temporary ticket can give the wrong answer
+
+A **temporary object** is an unnamed object created for an expression. In the following program, an automatic conversion creates a new ticket just to satisfy a function call:
 
 ```cpp
 #include <iostream>
 #include <string>
 
-class Animal {
+class AdmissionTicket {
 public:
-    Animal(const std::string& name) : name_(name) {}   // no explicit
+    AdmissionTicket(const std::string& visitor) : visitor_(visitor) {}
 
-    void eat() const {
-        std::cout << name_ << " is eating\n";
+    std::string visitor() const {
+        return visitor_;
+    }
+
+    bool admit() {
+        if (admitted_) return false;
+        admitted_ = true;
+        return true;
+    }
+
+    bool isAdmitted() const {
+        return admitted_;
     }
 
 private:
-    std::string name_;
+    std::string visitor_;
+    bool admitted_ = false;
 };
 
-void feed(const Animal& animal) {
-    animal.eat();
+void printAdmissionStatus(const AdmissionTicket& ticket) {
+    std::cout << ticket.visitor()
+              << (ticket.isAdmitted() ? ": admitted\n" : ": not admitted\n");
 }
 
 int main() {
-    std::string name = "Rex";
-    feed(name);   // Compiles!
+    AdmissionTicket actual("Maya");
+    actual.admit(); // Record entry on the existing ticket.
+
+    std::string name = "Maya";
+    printAdmissionStatus(name);   // C++ creates a new ticket from the name.
+    printAdmissionStatus(actual); // Reads the ticket that recorded Maya's entry.
 }
 ```
 
 Output:
 
 ```text
-Rex is eating
+Maya: not admitted
+Maya: admitted
 ```
 
-`feed()` expects an animal, but receives a piece of text. C++ silently builds a **temporary** `Animal` named Rex, feeds it, and throws it away when the line ends. **No real animal was fed.** If the program had a real `Animal rex("Rex")` somewhere, it would still be hungry.
+`const AdmissionTicket&` reads a ticket without copying or changing it. It can also refer to a temporary ticket for the duration of the function call.
 
-With `explicit Animal(const std::string& name)`, the line `feed(name)` no longer compiles, and the mistake is caught immediately.
+For the first status call:
 
-## 4. The key intents
+1. The function needs an admission ticket, but `name` is a string.
+2. The non-explicit constructor lets C++ create a new ticket from that string.
+3. Every new ticket starts with `admitted_ = false`, so the status says “not admitted.”
+4. The temporary ticket is destroyed after that call expression finishes.
 
-### Prevent surprising conversions
+C++ did not look up Maya's existing ticket. The second call uses `actual`, whose entry flag is already `true`.
 
-An implicit conversion is invisible at the call site. `explicit` makes every conversion visible in the code, so readers see exactly which objects are created.
-
-### Keep strong types strong
-
-Types such as `Seconds`, `Meters` or `UserId` exist to stop mix-ups between plain numbers. Without `explicit`, any `int` slips in, and the type protects nothing.
-
-### Catch mistakes at compile time
-
-Passing the wrong kind of value becomes a compile error instead of a silent temporary object or a wrong unit at runtime.
-
-### Make the author's intent clear
-
-Leaving `explicit` off becomes a deliberate statement: "converting to this type is natural and safe." For example, `std::string s = "hello";` is meant to work.
-
-## 5. Where `explicit` applies
-
-### Single-argument constructors: the main case
-
-Any constructor that **can** be called with one argument, including one where the other parameters have defaults:
+Replacing the constructor declaration with this version catches the mistaken string argument:
 
 ```cpp
-class Buffer {
+explicit AdmissionTicket(const std::string& visitor) : visitor_(visitor) {}
+```
+
+Now `printAdmissionStatus(name)` fails to compile. Pass `actual` when you want its status. Writing `AdmissionTicket(name)` is still allowed if you intentionally want to create a new ticket.
+
+In the printing expression, `condition ? first : second` chooses `first` when the condition is true and `second` otherwise. Here it chooses the admitted or not-admitted message.
+
+## 5. Other places explicit can be used
+
+### 5.1 A constructor with default arguments
+
+A constructor can take one argument even when it declares more parameters, if the extra parameters have defaults:
+
+```cpp
+// A separate class sketch, using <string>:
+class AdmissionTicket {
 public:
-    explicit Buffer(int size, char fill = ' ');   // Callable with one argument.
+    explicit AdmissionTicket(const std::string& visitor, int priceCents = 1500)
+        : visitor_(visitor), priceCents_(priceCents) {}
+
+private:
+    std::string visitor_;
+    int priceCents_;
 };
 ```
 
-Without `explicit`, `Buffer b = 64;` would silently create a 64-character buffer.
+`AdmissionTicket("Maya")` uses the default 1500-cent price. Because one supplied name is enough to call this constructor, `explicit` still matters: it prevents automatic conversion from a `std::string` to a ticket.
 
-### Constructors with several arguments and `{}`
+### 5.2 Several arguments supplied through braces
 
-Since C++11, braces can supply several arguments at once. Without `explicit`, this compiles:
+Since C++11, a braced argument can supply several constructor inputs at once. Using the preceding class in a separate example:
 
 ```cpp
-struct Point {
-    Point(int x, int y) : x(x), y(y) {}
-    int x, y;
-};
+void issueTicket(const AdmissionTicket& ticket); // Assume a definition is provided.
 
-void draw(Point p);
-
-draw({3, 4});   // Silently builds Point(3, 4).
+// Inside a function:
+issueTicket(AdmissionTicket("Maya", 1500)); // Works with the explicit constructor.
+// issueTicket({"Maya", 1500}); // Error: this form cannot use the explicit constructor.
 ```
 
-This form is often harmless and readable, so many codebases allow it. Mark a multi-argument constructor `explicit` only if `{3, 4}` could be misunderstood.
+Without `explicit`, the braced call could create a ticket from those two inputs. Decide whether that shorter form is clear enough for your class; `explicit` is not limited to constructors with one declared parameter.
 
-### Conversion operators
+### 5.3 Converting a ticket check to true or false
 
-A class can also convert *into* another type. The common case is checking whether something is valid:
+A **conversion function** tells C++ how an object can be viewed as another type. A ticket check might provide `operator bool()` so it can be used in an `if` condition.
 
 ```cpp
 #include <iostream>
 
-class Connection {
+class TicketCheck {
 public:
+    explicit TicketCheck(bool accepted) : accepted_(accepted) {}
+
     explicit operator bool() const {
-        return connected_;
+        return accepted_;
     }
 
 private:
-    bool connected_ = true;
+    bool accepted_;
 };
 
 int main() {
-    Connection conn;
+    TicketCheck result(true);
 
-    if (conn) {                 // OK: conditions may use explicit bool.
-        std::cout << "Connected\n";
+    if (result) { // An if condition is allowed to use explicit operator bool.
+        std::cout << "Ticket accepted\n";
     }
 
-    // int n = conn;            // Error: no silent conversion to bool, then int.
-    // bool b = conn;           // Error: "=" form needs an implicit conversion.
-    bool b = static_cast<bool>(conn);   // OK: written out.
-    std::cout << b << '\n';
+    // bool accepted = result; // Error: automatic conversion is blocked here.
+    // int number = result;    // Error: the check cannot silently become a number.
+    bool accepted = static_cast<bool>(result);
+    std::cout << accepted << '\n';
 }
 ```
 
 Output:
 
 ```text
-Connected
+Ticket accepted
 1
 ```
 
-`explicit operator bool` lets you write `if (conn)` while blocking accidents such as `int n = conn;` or `conn + 1` [1].
+`bool` stores `true` or `false`. `static_cast<bool>(result)` explicitly requests the conversion. Printing `true` with the default `std::cout` settings displays `1`.
 
-### Where you do **not** need it
-
-- **Constructors with no arguments,** such as `Seconds()`.
-- **Copy and move constructors,** such as `Seconds(const Seconds&)`. Marking them `explicit` causes confusing errors when returning or passing objects.
+`explicit operator bool()` still works in conditions such as `if (result)`, but prevents unrelated automatic conversions such as treating the check as an integer [1].
 
 ## 6. Common mistakes
 
-### Thinking `explicit` blocks object creation
+| Mistake | What actually happens | Better approach |
+|---------|-----------------------|-----------------|
+| Thinking explicit blocks all object creation | Direct creation such as `TicketNumber(42)` still works | Write the type and constructor argument when creating an object |
+| Assuming every use of `=` is rejected | `TicketNumber n = TicketNumber(42)` is allowed | Check whether a different input type needs automatic conversion |
+| Forgetting default arguments | A constructor with two parameters may still accept one supplied argument | Check how few arguments a caller can supply |
+| Expecting a visitor name to find an existing ticket | A converting constructor creates a new ticket | Pass the actual ticket when you need its current state |
+| Marking ordinary copy or move constructors explicit | Common passing, returning, and copying operations can fail | Normally leave copy and move constructors non-explicit |
 
-It does not. `Seconds s(5);`, `Seconds s{5};` and `Seconds(5)` all still work. Only the silent forms are blocked.
+A **copy constructor** makes a new object from an existing object of the same class. A **move constructor** makes a new object by taking resources from another object when moving is appropriate. Neither is an ordinary conversion from a name or integer.
 
-### Forgetting constructors with default arguments
+A constructor requiring no arguments does not automatically convert an integer or string. `explicit` can affect some braced initialization forms for such a constructor, but preventing a one-value conversion is not the reason to add it there.
 
-`Buffer(int size, char fill = ' ')` looks like a two-argument constructor, but it can be called with one. It needs `explicit` just as much.
+### A string literal is not already a std::string
 
-### Expecting a string literal to convert all the way
+In the temporary-ticket example, `name` is a `std::string`, so one constructor converts it into an admission ticket when `explicit` is absent.
 
-Without `explicit`, `feed(name)` compiles when `name` is a `std::string`. But `feed("Rex")` does **not** compile even without `explicit`. C++ allows only **one** user-defined conversion in a silent chain, and `"Rex"` would need two: text → `std::string` → `Animal`. Do not rely on this rule for safety; use `explicit`.
+The call `printAdmissionStatus("Maya")` is different. It would need two class-based conversions: string literal → `std::string` → `AdmissionTicket`. C++ does not allow that automatic chain.
 
-### Marking everything `explicit` without thinking
+This conversion limit happens to reject the literal call. Use `explicit` to express the rule deliberately instead of depending on that limit.
 
-A type that truly *is* its value, such as a string from text or a complex number from a `double`, can reasonably allow conversion. Decide on purpose.
+## 7. Checklist and self-test
 
-## 7. A short checklist
+### 7.1 Design checklist
 
-1. Can this constructor be called with exactly one argument, counting defaults? If so, consider `explicit`.
-2. Would a silent conversion ever surprise a reader or hide a bug? If so, add `explicit`.
-3. Is the conversion truly natural, like text to string? Then leaving it off may be fine; do it on purpose.
-4. Writing `operator bool`? Make it `explicit`.
-5. Do not put `explicit` on copy or move constructors.
+1. Can one supplied value call this constructor, including defaults for other parameters?
+2. Would automatically creating an object from that value hide a mistake?
+3. If so, mark the constructor `explicit`.
+4. Check that intended calls still write object creation clearly.
+5. Use `explicit operator bool()` when conditions should work but unrelated automatic conversions should fail.
+6. Normally keep copy and move constructors non-explicit.
 
-## 8. Self-test
+### 7.2 Check your understanding
 
-**What does `explicit` prevent?**
-
-<details>
-<summary>Answer</summary>
-
-Implicit conversions: C++ silently creating an object of your class from a value of another type, such as `wait(5)` creating a `Seconds`.
-
-</details>
-
-**With `explicit Seconds(int)`, which of these compile: `Seconds a(5);`, `Seconds b = 5;`, `wait(5);`, `wait(Seconds(5));`?**
+**Why does printLabel(42) fail with an explicit TicketNumber constructor?**
 
 <details>
 <summary>Answer</summary>
 
-`Seconds a(5);` and `wait(Seconds(5));` compile. `Seconds b = 5;` and `wait(5);` do not, because both need a silent conversion.
+The function needs a ticket-number object. It cannot automatically convert the plain integer using the explicit constructor. Write `printLabel(TicketNumber(42))`.
 
 </details>
 
-**Why is `feed(name)` a bug when `Animal`'s constructor is not explicit?**
+**Does TicketNumber number = TicketNumber(42) work?**
 
 <details>
 <summary>Answer</summary>
 
-C++ creates a temporary `Animal` from the string, feeds it, and destroys it. No existing animal is fed, yet the code compiles and prints a normal-looking message.
+Yes. `TicketNumber(42)` deliberately creates the correct type before it is used to initialize `number`.
 
 </details>
 
-**Does `Buffer(int size, char fill = ' ')` need `explicit`?**
+**Why did printAdmissionStatus(name) report that Maya had not entered?**
 
 <details>
 <summary>Answer</summary>
 
-Usually yes. It can be called with one argument, so it allows `Buffer b = 64;` silently.
+The non-explicit constructor created a fresh ticket from the name. That ticket had no entry recorded. Pass Maya's existing ticket to read its current state.
 
 </details>
 
-**Why make `operator bool` explicit?**
+**Can a constructor with default arguments need explicit?**
 
 <details>
 <summary>Answer</summary>
 
-So `if (conn)` still works, but accidents such as `int n = conn;` or `conn + 1` are rejected.
+Yes. A constructor taking a name and a default price can still be called with just the name, so it can allow an automatic name-to-ticket conversion without `explicit`.
 
 </details>
 
-**Should copy constructors be explicit?**
+**Why can if (result) use explicit operator bool()?**
 
 <details>
 <summary>Answer</summary>
 
-No. That would block ordinary copying, such as passing or returning objects by value, and cause confusing errors.
+C++ specifically allows this explicit conversion in conditions. It still rejects automatic conversion in forms such as `bool accepted = result`.
 
 </details>
 
-## 9. TL;DR
+## 8. Short recap
 
-A constructor that can take one argument is also a silent converter. `explicit` turns that off, so `wait(5)` and `Seconds s = 5;` become errors while `Seconds s(5);` and `wait(Seconds(5))` still work. Put `explicit` on single-argument constructors and on `operator bool` by default; leave it off only when a conversion is genuinely natural, and never on copy or move constructors.
+Use `explicit` when callers should deliberately create an object from another value. `TicketNumber(42)` works; automatically turning `42` into a ticket number does not. The same rule can prevent a visitor name from silently becoming a fresh admission ticket.
 
 ## Sources and further reading
 

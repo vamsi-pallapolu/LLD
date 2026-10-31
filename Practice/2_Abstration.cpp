@@ -1,64 +1,64 @@
+// Museum receipt example
+//Bad example
+
+
 #include <iostream>
 #include <string>
+#include <stdexcept>
 
-class AudioOutput{
-public:
-    // Asking compiler to use default implementation of destructor
-    virtual ~AudioOutput() = default; 
+// struct AdmissionTicket{
+//     std::string visitor{};
+//     int priceCents{};
+// };
 
-    virtual void play(const std::string & song)= 0; // pure virtual function
-        
-};
+// // Here receipt depends on ticket internal details
+// void printReceipt(const AdmissionTicket& ticket){
+//     std::cout << ticket.visitor << " :" << ticket.priceCents << std::endl;
+// }
 
-// Each device decide how for itself
-class PhoneSpeaker: public AudioOutput{
-    public:
-        void play(const std::string & song) override{
-            std::cout << "Playing " << song << " through Phone Speaker" << std::endl;
-        }
-};
 
-class WiredHeadset: public AudioOutput{
-public:
-    void play(const std::string &song) override{
-        std::cout << "Playing " << song << " through Wired Headset" << std::endl;
-    }
-};
-
-class BluetoothHeadset: public AudioOutput{
-
-    public:
-        void play(const std::string& song) override{
-            std::cout << "Playing " << song << " through Bluetooth Headset" << std::endl;
-        }
-};
-
-class MusicPlayer{
+class AdmissionTicket{
 private:
- AudioOutput* _output;
+    std::string _visitor{};
+    int _priceCents{};
 public:
-    explicit MusicPlayer(AudioOutput& output):_output{&output}{
-
+    
+    AdmissionTicket(const std::string& visitor, int price):_visitor{visitor}{
+        if(price<0)
+            throw std::invalid_argument("Price must not be negative");
+        _priceCents = price;
     }
 
-    void connect(AudioOutput &output){
-        _output = &output;
+    void setPriceCents(int price){
+         if(price<0)
+            throw std::invalid_argument("Price must not be negative");
+        _priceCents = price;   
     }
 
-    void play(const std::string & song){
-        _output->play(song);
+    const std::string& getVisitor() const{
+        return _visitor;
     }
+
+    int getPriceCents() const {
+        return _priceCents;
+    }
+
 };
+
+
+void printReceipt(const AdmissionTicket& ticket){
+    // Here printReceipt does not know how the price is stored and is calculated
+    // AdmissionTicket exposes its public methods as interface for Receipt
+    std::cout << ticket.getVisitor() << " :" << ticket.getPriceCents() << std::endl;
+}
 
 int main(){
 
-    WiredHeadset wiredhs;
-    PhoneSpeaker ps;
-    MusicPlayer player(ps);
-    player.play("Thelusa Manasa Song");
+    AdmissionTicket adult{"Maya", 1000};
+    AdmissionTicket child{"Leo", 500};
 
-    player.connect(wiredhs);
-    player.play("Ranu Bombay ki ranu");
+    printReceipt(adult);
+
 
 
     return 0;

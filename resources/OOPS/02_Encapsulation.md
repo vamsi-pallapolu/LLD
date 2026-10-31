@@ -1,10 +1,26 @@
 # Encapsulation: Let an Object Protect Its Data
 
-**Encapsulation is the bundling of data and the methods that operate on that data into a single unit, such as a class, with controlled access to the unit's internal state.**
+**Encapsulation keeps an object's data and the functions that use it together, and controls how other code can access that data.** A ticket stores its price and checks requests to change it.
 
-**Data hiding** is the restriction of direct access to an object's internal data. In C++, access specifiers such as `private` support data hiding as part of encapsulation.
+**Data hiding** means preventing other code from directly reading or changing selected fields. `private` hides the stored ticket price, so callers must use the functions the ticket provides.
 
 We continue with the museum's `AdmissionTicket` from [Classes and Objects](01_ClassesAndObjects.md): Maya's ticket starts at 1500 cents and Leo's at 800 cents. This note focuses on the rule that a ticket price must never be negative. Zero is valid for a free ticket.
+
+
+## Contents
+
+1. [Think of changing a ticket at the museum counter](#1-think-of-changing-a-ticket-at-the-museum-counter)
+2. [The problem with directly changing data](#2-the-problem-with-directly-changing-data)
+3. [Put the checks inside the class](#3-put-the-checks-inside-the-class)
+4. [Private alone is not enough](#4-private-alone-is-not-enough)
+5. [Reading data without giving away control](#5-reading-data-without-giving-away-control)
+6. [The key intents](#6-the-key-intents)
+7. [Ask for an action instead of repeating its steps](#7-ask-for-an-action-instead-of-repeating-its-steps)
+8. [How is this different from abstraction?](#8-how-is-this-different-from-abstraction)
+9. [Common mistakes](#9-common-mistakes)
+10. [Before writing the class](#10-before-writing-the-class)
+11. [Check your understanding](#11-check-your-understanding)
+12. [Short recap](#12-short-recap)
 
 ## 1. Think of changing a ticket at the museum counter
 
@@ -16,7 +32,7 @@ In code:
 - `setPriceCents()` is `public`: outside code can request a change.
 - The constructor and setter both reject negative prices.
 
-The object handles the checks, so every place that uses it does not have to repeat them.
+The ticket checks the price in one place. Receipt code and counter code can use that check instead of each writing their own.
 
 ## 2. The problem with directly changing data
 
@@ -45,9 +61,17 @@ Maya: -100 cents
 
 There is no check to stop the assignment. If many parts of the program change `priceCents` directly, every one must remember the rule. Forget it once, and the ticket stores an invalid price.
 
+With a public field, `adult.priceCents = -100` stores the negative number immediately. With a checked function, the ticket can reject that request before its stored price changes.
+
 ## 3. Put the checks inside the class
 
-This is the same class as in the first note. The new `main()` demonstrates a valid change and a rejected change.
+This uses the ticket class from [Classes and Objects](01_ClassesAndObjects.md). The new `main()` makes Maya's ticket free, then tries to give Leo a negative price.
+
+An **exception** reports an error and stops the current operation. `throw` reports it, and a matching `catch` handles it. Our `catch` prints the error so the program can continue. The program requires C++11 or newer.
+
+A **constructor** sets up a new object. A **setter** is a function that changes a stored value. Our constructor checks the starting price, and our setter checks each requested new price.
+
+`const std::string&` reads the supplied name without changing or copying that input; the ticket then stores its own copy. The trailing `const` on `visitor()` and `priceCents()` means those functions read the ticket without changing its fields.
 
 ```cpp
 #include <iostream>
@@ -59,15 +83,15 @@ public:
     AdmissionTicket(const std::string& visitor, int priceCents)
         : visitor_(visitor), priceCents_(priceCents) {
         if (priceCents_ < 0) {
-            throw std::invalid_argument("Price must not be negative");
+            throw std::invalid_argument("Price must not be negative"); // Refuse to create an invalid ticket.
         }
     }
 
     void setPriceCents(int priceCents) {
         if (priceCents < 0) {
-            throw std::invalid_argument("Price must not be negative");
+            throw std::invalid_argument("Price must not be negative"); // Stop before changing the old price.
         }
-        priceCents_ = priceCents;
+        priceCents_ = priceCents; // Store the new price only after it passes the check.
     }
 
     std::string visitor() const {
@@ -113,7 +137,7 @@ Price must not be negative
 Leo: 800 cents
 ```
 
-### Follow the example
+### 3.1 Follow the example
 
 1. Each constructor checks the starting price.
 2. `adult.setPriceCents(0)` makes Maya's ticket free. Zero satisfies the rule.
@@ -123,22 +147,24 @@ Leo: 800 cents
 
 A negative starting price is rejected too. For example, `AdmissionTicket invalid("Maya", -100)` would throw during construction, so no completed ticket object would be created.
 
-### Read the C++ syntax
+### 3.2 Read the C++ syntax
 
 | Code | Plain meaning |
 |------|---------------|
 | `private:` | Outside code cannot directly access the listed data |
 | `public:` | Outside code can call the listed functions |
-| `: visitor_(visitor), priceCents_(priceCents)` | Initialize the ticket's stored values |
+| `: visitor_(visitor), priceCents_(priceCents)` | Store the supplied name and starting price before the constructor body runs |
 | `priceCents < 0` | Check whether the requested price is negative |
 | `void setPriceCents(int priceCents)` | Request a price change without returning a result |
 | `int priceCents() const` | Read the price without changing the ticket |
 | `throw std::invalid_argument(...)` | Report an invalid request as an exception |
-| `try` / `catch` | Attempt an operation and handle the indicated exception |
+| `try` / `catch` | Run the code in `try`; if the named error is thrown, handle it in `catch` |
 
-An unhandled exception stops the program. The ending `_` in `priceCents_` is just a naming choice for data stored inside the object.
+`error.what()` returns the exception's message, such as `"Price must not be negative"`. `<stdexcept>` provides `std::invalid_argument`, the error type used here. If no matching handler catches a thrown exception, the program stops.
 
-### What can outside code do?
+The trailing `_` in `priceCents_` marks a stored field by naming convention. `priceCents`, without `_`, is the requested new value. The setter checks that request before assigning it to the stored field.
+
+### 3.3 What can outside code do?
 
 It can request a checked change through `setPriceCents()`, or read values through `visitor()` and `priceCents()`.
 
@@ -164,7 +190,9 @@ Now `child.setPriceCents(-100)` accepts a bad value even though the data is stil
 
 A function that sets a value is often called a **setter**. Setters are useful when callers need to choose a value, but they must enforce the rules. The checked version in the complete program does that before changing the stored price.
 
-**A class invariant is a condition that must hold for every valid object of a class.** Here, it is `priceCents_ >= 0`. The constructor establishes it, and public operations preserve it.
+A **class invariant** is a rule every usable object must keep. Our rule is `priceCents_ >= 0`: a ticket price must be zero or more cents.
+
+The constructor checks that a new ticket follows the rule. The setter checks that a changed ticket still follows it. A rejected request leaves the old valid price in place.
 
 Every way of changing the data must follow the rules. Private access by itself cannot guarantee this.
 
@@ -189,21 +217,21 @@ int& priceCents() {
 
 The `&` means a **reference**: another name for the actual stored number. Outside code could then write `child.priceCents() = -100` and bypass the checks.
 
-For a small value such as this price, returning a copy is simple and keeps control inside the class. For larger data, `const&` allows reading existing data without permission to change it through that reference.
+Returning an `int` gives the caller a separate number, so changing it cannot change the ticket. A function returning `const int&` would let the caller read the stored number through a reference but not assign to it through that reference. For this small number, a copy is simpler.
 
 ## 6. The key intents
 
-### Fewer checks to repeat
+### 6.1 Fewer checks to repeat
 
 Callers use `setPriceCents()` and handle rejection. They do not have to duplicate its validation to protect the ticket.
 
-### Easier changes
+### 6.2 Easier changes
 
 Suppose the ticket later calculates its price instead of storing it. If `priceCents()` still returns a nonnegative price in cents, code that reads it can keep working. We make that change in the inheritance and polymorphism notes.
 
 The setter belongs to this editable-price version. A future fixed-category design can remove price editing; callers that use the setter would then need to change.
 
-### A clearer place to look for mistakes
+### 6.3 A clearer place to look for mistakes
 
 If the stored price becomes negative, inspect the class's constructor and functions that can change it. The allowed ways to change the value are gathered in one place.
 
@@ -229,10 +257,10 @@ The class handles validation. Reading is still useful: a receipt needs `priceCen
 
 | Idea | What it helps with | Ticket example |
 |------|--------------------|----------------|
-| **Encapsulation** | Bundling data and methods with controlled access to state | `priceCents_` is private and changes go through a checked setter |
-| **Abstraction** | Exposing essential operations while hiding implementation details | A receipt calls `priceCents()` without knowing how the price is stored or calculated |
+| **Encapsulation** | Keeping price changes under the ticket's control | `priceCents_` is private and changes go through a checked setter |
+| **Abstraction** | Letting receipt code request a price without learning how it is produced | A receipt calls `priceCents()` without knowing how the price is stored or calculated |
 
-They work together. Encapsulation establishes the boundary around data and its operations; abstraction exposes essential operations without requiring knowledge of their implementation.
+Encapsulation decides who can change the price and what checks a change must pass. Abstraction lets the receipt ask for the price without learning how the ticket stores or calculates it.
 
 See [Abstraction](03_Abstraction.md) for the next topic.
 
@@ -240,8 +268,8 @@ See [Abstraction](03_Abstraction.md) for the next topic.
 
 - **Checking changes but not starting values:** the constructor must reject a negative price too.
 - **Adding an unchecked setter:** private data does not help if a public function accepts any value.
-- **Returning a mutable reference:** callers can bypass validation.
-- **Forgetting the boundary:** zero should succeed, while a negative price should fail without changing the old value.
+- **Returning `int&` from the price getter:** callers can change the stored price without using the checked setter.
+- **Getting the zero case wrong:** zero is a valid free ticket; a negative request must fail and leave the old price unchanged.
 - **Adding unnecessary restrictions:** freely editable draft receipt text may be fine in a `struct`; ticket price rules need checked operations.
 
 ## 10. Before writing the class
@@ -251,7 +279,7 @@ See [Abstraction](03_Abstraction.md) for the next topic.
 3. Keep data private when outside changes need to be controlled.
 4. Check starting values in the constructor.
 5. Provide the actions other code needs.
-6. Make every state-changing operation preserve the rules.
+6. Check that every function that changes a stored value keeps that value valid.
 7. Let callers read what they need without giving them an unchecked way to change it.
 
 ## 11. Check your understanding
@@ -301,9 +329,9 @@ No. It can suit freely editable data. Use checked operations when changes must f
 
 </details>
 
-## 12. TL;DR
+## 12. Short recap
 
-Encapsulation bundles data and operations and controls access to state. Data hiding restricts direct access. Our ticket establishes a nonnegative price in its constructor and preserves that rule through its setter; the getter returns a copy so callers cannot bypass the check.
+Keep the price private and check it when a ticket is created or changed. Let callers read a copy through `priceCents()`. A negative request is rejected before the stored price changes.
 
 ## Sources and further reading
 

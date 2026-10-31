@@ -1,8 +1,19 @@
 # Abstraction: Show What Matters
 
-**Abstraction is the process of representing the essential features of an entity while hiding implementation details that are unnecessary to its users.** It emphasizes what an entity does rather than how it does it [1].
+**Abstraction means giving code a useful function to call without making it understand all the steps inside that function** [1]. A receipt calls `priceCents()` to get the ticket price; the ticket decides how to produce that number.
 
 We continue with the same museum admission tickets: Maya pays 1500 cents and Leo pays 800 cents. A receipt needs each visitor's name and price. It does not need to know how a ticket stores those details.
+
+
+## Contents
+
+1. [Start with the museum receipt](#1-start-with-the-museum-receipt)
+2. [Bad vs. good: a receipt that depends on ticket storage](#2-bad-vs-good-a-receipt-that-depends-on-ticket-storage)
+3. [The key intents](#3-the-key-intents)
+4. [Common mistakes](#4-common-mistakes)
+5. [A short design checklist](#5-a-short-design-checklist)
+6. [Check your understanding](#6-check-your-understanding)
+7. [Short recap](#7-short-recap)
 
 ## 1. Start with the museum receipt
 
@@ -13,9 +24,9 @@ At the museum counter, the receipt printer asks a ticket for:
 
 Those operations describe **what the printer needs**. The ticket handles **how to supply it**.
 
-**Hiding details does not mean the code must be secret.** It means you do not need to understand those details to use the ticket.
+The receipt programmer can read the ticket code if needed, but does not need to study it every time a receipt is printed. Calling the price function is enough.
 
-### You already use abstraction in code
+### 1.1 You already use abstraction in code
 
 ```cpp
 printReceipt(adult);
@@ -27,7 +38,7 @@ A well-named function is already an abstraction. You do not need special C++ key
 
 ## 2. Bad vs. good: a receipt that depends on ticket storage
 
-### A receipt that reads internal fields
+### 2.1 A receipt that reads internal fields
 
 This complete program works:
 
@@ -60,34 +71,24 @@ Maya: 1500 cents
 Leo: 800 cents
 ```
 
-The receipt depends directly on the ticket's fields. If prices later come from category-specific calculations, code reading the old field must change. The same dependency could appear in refunds and sales reports.
+This receipt reads `ticket.priceCents` directly, so it needs that exact field to exist. If the ticket later calculates its price instead of storing that field, the receipt must change. Refund and report code reading the same field would need edits too.
 
-Public data can be appropriate for simple records. Here, we want callers to depend on the meaning of a price operation while the ticket's implementation evolves.
+Public fields can suit a simple record that callers are allowed to edit freely. Here, we want receipt code to keep asking for a price even if the way the ticket produces it changes.
 
-### A receipt that asks for ticket details
+### 2.2 A receipt that asks for ticket details
 
-Use the same checked class from [Encapsulation](02_Encapsulation.md), and let the receipt call its public operations:
+This complete C++11 program lets the receipt ask for the name and price through functions. To keep that idea visible, it assumes the supplied prices are valid and has no price-changing function. [Encapsulation](02_Encapsulation.md) shows the checks needed when prices can be created or changed.
+
+`const AdmissionTicket&` means the receipt reads the original ticket without copying or changing it. The trailing `const` on the ticket's getters lets them be called through that read-only reference.
 
 ```cpp
 #include <iostream>
-#include <stdexcept>
 #include <string>
 
 class AdmissionTicket {
 public:
     AdmissionTicket(const std::string& visitor, int priceCents)
-        : visitor_(visitor), priceCents_(priceCents) {
-        if (priceCents_ < 0) {
-            throw std::invalid_argument("Price must not be negative");
-        }
-    }
-
-    void setPriceCents(int priceCents) {
-        if (priceCents < 0) {
-            throw std::invalid_argument("Price must not be negative");
-        }
-        priceCents_ = priceCents;
-    }
+        : visitor_(visitor), priceCents_(priceCents) {}
 
     std::string visitor() const {
         return visitor_;
@@ -123,142 +124,87 @@ Maya: 1500 cents
 Leo: 800 cents
 ```
 
-`printReceipt()` knows only the operations it needs. Today `priceCents()` reads a member; later each ticket category will provide its own implementation. The receipt function's body will stay the same.
+`printReceipt()` calls two ticket functions: `visitor()` returns the name, and `priceCents()` returns the price in cents. The ticket does not print those values; the receipt's `std::cout` line prints them.
 
-### Read the interface as a promise
+An **operation** here means a function the ticket provides. The receipt uses the name and price functions to do its job, so it does not need to read the ticket's private fields.
 
-**An interface specifies the operations available to clients and the behavioral contract those operations must satisfy, independently of their implementation.** In plain language, it says what you can ask for and what each request means.
+The practice file [2_Abstration.cpp](../../Practice/2_Abstration.cpp) names these functions `getVisitor()` and `getPriceCents()`. They serve the same purpose.
 
-| Operation | Promise in this example |
+### 2.3 Read the interface as a set of requests
+
+An **interface** is the set of functions a caller can use, together with what each function promises. This ticket offers two requests: tell me the visitor name and tell me the price in cents.
+
+| Operation | Meaning in this example |
 |-----------|-------------------------|
-| `visitor() const` | Return the visitor's name without changing the ticket |
-| `priceCents() const` | Return a nonnegative price in whole cents without changing the ticket |
-| `setPriceCents(int)` | In this editable-price version, accept a nonnegative price or throw before changing it |
+| `visitor()` | Return the visitor's name |
+| `priceCents()` | Return the price in whole cents |
 
-The receipt uses only the first two operations. It does not need permission to change the price.
+C++ has no separate `interface` keyword. An ordinary class's public functions can provide an interface.
 
-C++ has no separate `interface` keyword. A class's public operations form an interface; an abstract class is another tool for defining shared operations [3][4].
+### 2.4 Follow the first call
 
-### Follow the first call
+1. `printReceipt(adult)` asks for Maya's receipt.
+2. `ticket.visitor()` supplies `"Maya"`.
+3. `ticket.priceCents()` supplies 1500.
+4. The receipt formats those results without directly reading the stored fields.
 
-1. `printReceipt(adult)` receives Maya's existing ticket through `const AdmissionTicket&`.
-2. The reference avoids copying; `const` prevents the function from changing the ticket through that reference.
-3. `ticket.visitor()` supplies `"Maya"`.
-4. `ticket.priceCents()` supplies 1500.
-5. The receipt formats those results without touching the stored fields.
+The receipt handles formatting. The ticket handles supplying the name and price.
 
-The reference is borrowed for the call. It neither creates nor deletes the ticket. In this program, both ticket objects live until `main()` ends, so they exist throughout each call.
-
-### How the example develops in the next notes
-
-[Inheritance](04_Inheritance.md) introduces `AdultTicket` and `ChildTicket`, each derived from `AdmissionTicket`. The base keeps the visitor name, while each category supplies its price. That version stops offering arbitrary price editing.
-
-[Polymorphism](05_Polymorphism.md) then makes the shared price request virtual. Its base class will look like this. This is a preview declaration, not a replacement to paste into the program above:
-
-```cpp
-class AdmissionTicket {
-public:
-    virtual ~AdmissionTicket() = default;
-
-    std::string visitor() const {
-        return visitor_;
-    }
-
-    virtual int priceCents() const = 0;
-
-protected:
-    explicit AdmissionTicket(const std::string& visitor)
-        : visitor_(visitor) {}
-
-private:
-    std::string visitor_;
-};
-```
-
-| Code | Plain meaning |
-|------|---------------|
-| `virtual int priceCents() const` | Calls through the base reference can use the actual ticket kind's implementation |
-| `= 0` | This is a **pure virtual function**; a concrete ticket type must supply its price implementation |
-| `virtual ~AdmissionTicket() = default` | Allow correct cleanup when deleting a derived ticket through a base pointer |
-| `protected:` | The constructor can be used by the base and its derived classes |
-
-**An abstract class is a class that cannot be instantiated directly.** This preview is abstract because `priceCents()` is pure virtual [2]. The earlier class with a stored price is concrete, so it can be instantiated.
-
-An abstract base can share data, as this one shares the visitor name. When complete separation of interface and implementation is needed, C++ commonly uses a pure abstract class with no instance data [3][4].
-
-For now, focus on the promise: callers ask for a price in cents. The next two notes explain inheritance, `override`, and virtual calls using these same tickets.
+For constructors, references, and `const`, see [Classes and Objects](01_ClassesAndObjects.md). Access control and checked price changes are explained in [Encapsulation](02_Encapsulation.md).
 
 ## 3. The key intents
 
-### Reduce what you need to understand
+### 3.1 Reduce what you need to understand
 
 You can read the receipt function without learning the ticket's storage or pricing rules.
 
-### Change details without breaking readers
+### 3.2 Change details without breaking readers
 
-A ticket can change how it supplies a price while preserving the `priceCents()` promise. That keeps callers such as the receipt function independent of those details.
+Today, `priceCents()` returns one stored number. Suppose the museum later stores an admission amount and a booking fee separately. For Maya, 1400 cents plus a 100-cent fee still gives the same 1500-cent total.
 
-### Let one piece of code work with several implementations
+The relevant function bodies could change like this. These are separate sketches to put inside the ticket class; the comments describe the fields each version needs:
 
-The later virtual interface lets the same receipt function accept adult, child, and senior tickets. Abstraction defines the common request; runtime polymorphism chooses the implementation.
+```cpp
+// Earlier version: the ticket stores int priceCents_.
+int priceCents() const {
+    return priceCents_;
+}
+```
 
-### Make testing easier
+```cpp
+// Later version: the ticket stores int admissionCents_ and int bookingFeeCents_.
+int priceCents() const {
+    return admissionCents_ + bookingFeeCents_;
+}
+```
 
-With the later abstract base, a test ticket can return a known price so receipt formatting can be checked independently of real pricing rules.
-
-### Distinguish abstraction from encapsulation
-
-| Idea | Question | Ticket example |
-|------|----------|----------------|
-| **Abstraction** | What essential operations are exposed? | The receipt asks `priceCents()` without knowing how it gets the price |
-| **Encapsulation** | How are data and operations bundled, and access controlled? | `priceCents_` is private; the setter checks changes |
-
-These ideas work together, but private fields alone do not guarantee an interface that is easy to use.
+The receipt still calls `ticket.priceCents()`. It does not need to know about the two new fields. This change works with an ordinary class; no inheritance or `virtual` function is required.
 
 ## 4. Common mistakes
 
-### Forcing operations that do not fit every ticket
+### 4.1 Making the caller perform the implementation steps
 
-Every admission ticket has a visitor and a price. A request for an adult-only benefit does not necessarily belong on every ticket. Keep category-specific features with the relevant category.
+If receipt code reads ticket storage and calculates prices itself, it must understand those details. Put the calculation behind a useful operation such as `priceCents()`.
 
-### Letting details leak into the shared operation
+### 4.2 Using unclear names
 
-Avoid making receipt code pass a category whenever it asks for a price:
+`getValue()` does not say which value it returns. `priceCents()` explains both the value and its unit.
 
-```cpp
-// An alternative interface to avoid in this design:
-ticket.priceCents("adult");
-```
+### 4.3 Keeping the name but breaking the promise
 
-The ticket should know its own pricing behavior. Requiring the caller to supply a matching category spreads that knowledge and allows mismatches.
+If `priceCents()` starts returning 15 dollars instead of 1500 cents, the receipt will print `15 cents`, which is wrong. Keep the function's name, units, and behavior consistent so callers can trust the result.
 
-### Hiding failures along with the details
+### 4.4 Assuming abstraction requires an abstract class
 
-The current getter returns a stored value and has no pricing-service dependency. If a later implementation retrieves prices from a service, define how it reports failure. Returning zero on failure would wrongly look like a valid free ticket.
-
-Callers do not need every implementation detail, but they need a clear success and failure contract.
-
-### Keeping the name but breaking the promise
-
-A `priceCents()` implementation that returns dollars or changes the visitor breaks the interface's meaning even if it compiles. Every implementation must keep the same promise.
-
-### Keeping a reference after its object is gone
-
-Our receipt function uses its reference only during the call. If a different design stores that reference for later, the ticket must remain alive until its last use. Using a reference to a destroyed object is undefined behavior.
-
-### Building an interface too early
-
-The ordinary class already provides abstraction. Use an abstract base when several implementations or test doubles justify it. If categories differ only by a stored price, a single class with a price member can remain the simpler design [5].
+The ordinary ticket class already provides abstraction: callers ask for a price without reading its fields. An **abstract class** is a different C++ feature: a class you cannot create objects from directly. [Polymorphism](05_Polymorphism.md) explains that feature.
 
 ## 5. A short design checklist
 
 1. Write down what callers need to ask for.
 2. Name each operation after what it does.
-3. Include shared operations that make sense for every implementation.
-4. Keep implementation-specific settings and calculations inside the relevant implementation.
-5. Define results, units, side effects, and failure behavior.
-6. Add an abstract class when multiple implementations or test doubles justify it.
-7. Check that changing implementation details does not require editing callers.
+3. Keep storage and calculation details inside the class or function.
+4. Explain what each function returns, whether its number means cents or dollars, and when it can fail.
+5. Try changing how the price is produced and check that the receipt can still call the same function.
 
 ## 6. Check your understanding
 
@@ -289,41 +235,19 @@ No. `printReceipt()` and the ordinary ticket class already expose useful operati
 
 </details>
 
-**Why can't we create an object of the preview base class directly?**
+**What does “the receipt only relies on the operations it needs” mean?**
 
 <details>
 <summary>Answer</summary>
 
-Its `priceCents()` function is pure virtual, making `AdmissionTicket` abstract. A concrete derived ticket must supply that implementation.
+The receipt uses the name and price functions to print its output. It does not directly use the ticket's stored fields or need to understand how those functions produce their results.
 
 </details>
 
-**What should change in `printReceipt()` when senior tickets arrive?**
+## 7. Short recap
 
-<details>
-<summary>Answer</summary>
-
-Once the virtual interface is in place, nothing. A senior ticket provides the same name and price operations. The code that creates tickets chooses the new type.
-
-</details>
-
-**Why shouldn't the receipt pass `"adult"` into `priceCents()`?**
-
-<details>
-<summary>Answer</summary>
-
-It would force the receipt to know the ticket's category and risk supplying the wrong one. The ticket should handle its own pricing details.
-
-</details>
-
-## 7. TL;DR
-
-Abstraction exposes essential operations while hiding unnecessary details. Our receipt asks a ticket for a visitor and a price without depending on its storage. Ordinary functions and classes already provide abstraction; abstract classes can express shared operations across implementations.
+The receipt asks for a visitor name and a price. The ticket decides how to supply them. Those functions let the ticket's storage change while the receipt keeps using the same requests.
 
 ## Sources and further reading
 
 - [1] Wikipedia: [Abstraction (computer science)](https://en.wikipedia.org/wiki/Abstraction_(computer_science)).
-- [2] cppreference: [Abstract class](https://en.cppreference.com/w/cpp/language/abstract_class).
-- [3] C++ Core Guidelines: [C.121 — If a base class is used as an interface, make it a pure abstract class](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rh-abstract).
-- [4] C++ Core Guidelines: [C.122 — Use abstract classes as interfaces when complete separation of interface and implementation is needed](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rh-separation).
-- [5] C++ Core Guidelines: [I.25 — Prefer empty abstract classes as interfaces to class hierarchies](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#ri-abstract).
