@@ -1,92 +1,107 @@
 /*
-    Inheritance concepts
+    Inheritance Examples
 */
-
-// Without Inheritance
 #include <iostream>
 #include <string>
 
-class Animal
+class AdmissionTicket
 {
 private:
-    std::string _name{};
-    std::string _species{};
+    std::string _visitor{};
+    bool _admitted = false;
 
 public:
-    Animal(const std::string &name) : _name{name}
+    AdmissionTicket(const std::string &visitor) : _visitor{visitor}
     {
     }
 
-    ~Animal() = default;
+    const std::string &getVisitor() const { return _visitor; }
 
-    void eat() const
+    bool isAdmitted() const { return _admitted; }
+
+    bool admit()
     {
-        std::cout << _name << " eats food." << std::endl;
+        if (_admitted)
+        {
+            return false;
+        }
+        _admitted = true;
+        return true;
     }
 };
 
-class Dog
+class AdultTicket : public AdmissionTicket
 {
-private:
-    std::string _name{};
-
 public:
-    Dog(const std::string &name) : _name{name} {}
-
-    ~Dog() = default;
-
-    void eat() const
+    AdultTicket(const std::string &visitor) : AdmissionTicket(visitor)
     {
-        std::cout << _name << " eats food." << std::endl;
     }
 
-    void barks() const
+    int getPriceCents() const { return 1500; }
+};
+
+class ChildTicket : public AdmissionTicket
+{
+private:
+    int _priceCents{800};
+
+public:
+    ChildTicket(const std::string &visitor) : AdmissionTicket(visitor) {}
+
+    int getPriceCents() { return _priceCents; }
+};
+
+class GuidedTourTicket : public AdmissionTicket
+{
+private:
+    std::string _slot{};
+    bool _joinedTour = false;
+
+public:
+    GuidedTourTicket(const std::string &visitor, const std::string &slot) : AdmissionTicket(visitor), _slot{slot} {}
+
+    const std::string &getSlot() const { return _slot; }
+
+    bool getJoinedTour() const
     {
-        std::cout << _name << " barks." << std::endl;
+        return _joinedTour;
+    }
+
+    bool joinTour()
+    {
+        // Deny if already admitted and already joined tour
+        if (!isAdmitted() || _joinedTour)
+        {
+            return false;
+        }
+        _joinedTour = true;
+        return true;
     }
 };
 
-// Problem
-// We have to write eat twice,
-// if shred behavior changes, both copies needs updating
-
-// With Inheritance
-
-class Cat : public Animal
+void enterMuseum(AdmissionTicket &ticket)
 {
-private:
-    std::string _name{};
-
-public:
-    Cat(const std::string &name) : Animal{name}, _name{name}
-    {
-    }
-
-    void crawl() const
-    {
-        std::cout << _name << "  crawls" << std::endl;
-    }
-
-    void eat() const
-    {
-        std::cout << _name << " eats mice." << std::endl;
-    }
-};
+    bool entered = ticket.admit();
+    std::cout << ticket.getVisitor() << (entered ? " admitted\n" : " already admitted\n");
+}
 
 int main()
 {
-    std::string dog_name = "Bob";
-    Dog dog(dog_name);
-    dog.eat();
-    dog.barks();
 
-    // With inheritance
-    Cat cat("Little");
-    cat.eat();
-    cat.crawl();
+    AdultTicket adult("Maya");
+    ChildTicket child("leo");
 
-    Animal* animal = new Cat("Sten");
-    animal->eat(); // still call eat() from base because it is not virtual
+    enterMuseum(adult);
+    enterMuseum(adult); // The inherited rule prevents second admission
+
+    GuidedTourTicket tour("Eva", "11:00");
+    std::cout << "Tour before admission" << (tour.joinTour()?" joined\n": " denied\n");
+
+    enterMuseum(tour);
+    std::cout << tour.getVisitor() << " tour at: " << tour.getSlot() <<
+    (tour.joinTour()? " entered\n": " denied\n");
+    std::cout << "Second tour check-in " <<
+    (tour.joinTour()? " entered\n": " denied\n");
 
     return 0;
 }
