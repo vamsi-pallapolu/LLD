@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc"><title id="title">Inheritance</title><desc id="desc">Adult, child, and guided-tour tickets inherit the AdmissionTicket name and admission rule. Each ticket has its own entry record; Eva&#x27;s ticket adds a tour slot and check-in.</desc>
+<rect x="0" y="0" width="1200" height="440" rx="0" fill="#f6f8fb"/>
+<text x="40" y="49" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#18334b">Inheritance</text>
+<rect x="360" y="80" width="480" height="115" rx="16" fill="#e7eefb"/>
+<text x="600" y="122" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" text-anchor="middle" fill="#18334b">AdmissionTicket</text>
+<text x="600" y="161" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="400" text-anchor="middle" fill="#18334b">Visitor name + one-entry rule</text>
+<line x1="600" y1="195" x2="600" y2="225" stroke="#536b80" stroke-width="3"/>
+<line x1="225" y1="225" x2="975" y2="225" stroke="#536b80" stroke-width="3"/>
+<line x1="225" y1="225" x2="225" y2="250" stroke="#536b80" stroke-width="3"/>
+<polygon points="225,250 219,240 231,240" fill="#536b80"/>
+<rect x="50" y="250" width="350" height="130" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="90" cy="285" r="13" fill="#2563a6"/>
+<rect x="67" y="302" width="46" height="25" rx="12" fill="#2563a6"/>
+<text x="125" y="285" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#18334b">Maya / AdultTicket</text>
+<text x="125" y="320" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" fill="#536b80">Own inherited entry record</text>
+<text x="125" y="357" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" fill="#2563a6">Adds adult price: 1500</text>
+<line x1="600" y1="225" x2="600" y2="250" stroke="#536b80" stroke-width="3"/>
+<polygon points="600,250 594,240 606,240" fill="#536b80"/>
+<rect x="425" y="250" width="350" height="130" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="465" cy="285" r="13" fill="#087e80"/>
+<rect x="442" y="302" width="46" height="25" rx="12" fill="#087e80"/>
+<text x="500" y="285" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#18334b">Leo / ChildTicket</text>
+<text x="500" y="320" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" fill="#536b80">Own inherited entry record</text>
+<text x="500" y="357" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" fill="#087e80">Adds child price: 800</text>
+<line x1="975" y1="225" x2="975" y2="250" stroke="#536b80" stroke-width="3"/>
+<polygon points="975,250 969,240 981,240" fill="#536b80"/>
+<rect x="800" y="250" width="350" height="130" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="840" cy="285" r="13" fill="#a76d15"/>
+<rect x="817" y="302" width="46" height="25" rx="12" fill="#a76d15"/>
+<text x="875" y="285" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" text-anchor="start" fill="#18334b">Eva / GuidedTourTicket</text>
+<text x="875" y="320" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" fill="#536b80">Own inherited entry record</text>
+<text x="875" y="357" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" fill="#a76d15">Adds tour slot + check-in</text>
+<text x="600" y="419" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="middle" fill="#536b80">Each derived ticket is an admission ticket, with its own base part.</text>
+</svg>

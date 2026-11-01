@@ -22,6 +22,8 @@ For quick visual revision: [which conversions compile](#flowchart-automatic-conv
 
 A converting constructor lets C++ create an object when a function expects that class but receives another type. `explicit` requires the caller to request that construction deliberately.
 
+![With an explicit TicketNumber constructor, printLabel with a bare integer fails to compile; deliberate TicketNumber construction is allowed.](../images/explicit.svg)
+
 ## 2. Without explicit vs. with explicit
 
 ### 2.1 Without explicit: the constructor allows automatic conversion

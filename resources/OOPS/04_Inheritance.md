@@ -65,6 +65,8 @@ An adult ticket **is an** admission ticket: it must do everything the entrance e
 
 Use inheritance when both ideas fit: the new class is a kind of the base class, and code written for the base can sensibly use the new class [2].
 
+![Maya, Leo, and Eva have different ticket kinds that inherit the shared visitor and admission rule; each ticket keeps its own entry record.](../images/inheritance.svg)
+
 ## 2. The museum-ticket model
 
 ### 2.1 Requirements
@@ -399,8 +401,10 @@ ticket.visitor(); // Valid: declared in the base.
 if (!isAdmitted()) return false; // Valid: uses the base's public operation.
 ```
 
-| Member declared in the base | Derived member functions | Outside code with public inheritance |
-|-----------------------------|--------------------------|--------------------------------------|
+For public inheritance (`GuidedTourTicket : public AdmissionTicket`):
+
+| Access level in `AdmissionTicket` | Inside `GuidedTourTicket` methods | Outside the classes (e.g. `main()`) |
+|----------------------------------|----------------------------------|-----------------------------------|
 | `public` | Can access | Can access |
 | `protected` | Can use on their own object | Cannot access |
 | `private` | Cannot access directly | Cannot access directly |

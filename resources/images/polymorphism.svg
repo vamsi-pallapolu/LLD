@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc"><title id="title">Polymorphism</title><desc id="desc">One printReceipt function calls virtual priceCents through a base reference. The actual adult, child, or senior ticket returns its own price.</desc>
+<rect x="0" y="0" width="1200" height="440" rx="0" fill="#f6f8fb"/>
+<text x="40" y="49" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#18334b">Polymorphism</text>
+<rect x="365" y="80" width="470" height="115" rx="16" fill="#e7eefb"/>
+<text x="600" y="121" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" text-anchor="middle" fill="#18334b">printReceipt(ticket)</text>
+<text x="600" y="161" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#2563a6">Calls virtual priceCents()</text>
+<line x1="600" y1="195" x2="600" y2="225" stroke="#536b80" stroke-width="3"/>
+<line x1="225" y1="225" x2="975" y2="225" stroke="#536b80" stroke-width="3"/>
+<line x1="225" y1="225" x2="225" y2="250" stroke="#536b80" stroke-width="3"/>
+<polygon points="225,250 219,240 231,240" fill="#536b80"/>
+<rect x="50" y="250" width="350" height="130" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="93" cy="286" r="13" fill="#2563a6"/>
+<rect x="70" y="303" width="46" height="25" rx="12" fill="#2563a6"/>
+<text x="133" y="287" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#18334b">Maya / AdultTicket</text>
+<text x="133" y="342" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" text-anchor="start" fill="#2563a6">1500 cents</text>
+<line x1="600" y1="225" x2="600" y2="250" stroke="#536b80" stroke-width="3"/>
+<polygon points="600,250 594,240 606,240" fill="#536b80"/>
+<rect x="425" y="250" width="350" height="130" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="468" cy="286" r="13" fill="#087e80"/>
+<rect x="445" y="303" width="46" height="25" rx="12" fill="#087e80"/>
+<text x="508" y="287" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#18334b">Leo / ChildTicket</text>
+<text x="508" y="342" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" text-anchor="start" fill="#087e80">800 cents</text>
+<line x1="975" y1="225" x2="975" y2="250" stroke="#536b80" stroke-width="3"/>
+<polygon points="975,250 969,240 981,240" fill="#536b80"/>
+<rect x="800" y="250" width="350" height="130" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="843" cy="286" r="13" fill="#a76d15"/>
+<rect x="820" y="303" width="46" height="25" rx="12" fill="#a76d15"/>
+<text x="883" y="287" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#18334b">Nora / SeniorTicket</text>
+<text x="883" y="342" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" text-anchor="start" fill="#a76d15">1000 cents</text>
+<text x="600" y="419" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="middle" fill="#536b80">Same request. The actual object supplies the implementation.</text>
+</svg>

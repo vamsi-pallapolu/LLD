@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc"><title id="title">Encapsulation</title><desc id="desc">A caller requests a negative price. AdmissionTicket rejects the update, preserving Leo&#x27;s valid 800-cent price.</desc>
+<rect x="0" y="0" width="1200" height="440" rx="0" fill="#f6f8fb"/>
+<text x="40" y="49" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#18334b">Encapsulation</text>
+<rect x="40" y="100" width="320" height="270" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<rect x="440" y="100" width="320" height="270" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<rect x="840" y="100" width="320" height="270" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="200" cy="140" r="13" fill="#2563a6"/>
+<rect x="177" y="157" width="46" height="25" rx="12" fill="#2563a6"/>
+<text x="200" y="215" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="700" text-anchor="middle" fill="#18334b">Caller requests</text>
+<text x="200" y="258" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400" text-anchor="middle" fill="#18334b">setPriceCents(-100)</text>
+<text x="200" y="311" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="middle" fill="#536b80">Cannot write private fields</text>
+<line x1="367" y1="235" x2="433" y2="235" stroke="#536b80" stroke-width="3"/>
+<polygon points="433,235 423,229 423,241" fill="#536b80"/>
+<text x="600" y="155" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="#18334b">Ticket validates</text>
+<text x="600" y="215" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="400" text-anchor="middle" fill="#18334b">price &gt;= 0?</text>
+<rect x="500" y="249" width="200" height="55" rx="16" fill="#fbeaec"/>
+<text x="600" y="284" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" text-anchor="middle" fill="#b83b48">REJECT -100</text>
+<text x="600" y="338" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" fill="#536b80">No assignment happens</text>
+<line x1="767" y1="235" x2="833" y2="235" stroke="#536b80" stroke-width="3"/>
+<polygon points="833,235 823,229 823,241" fill="#536b80"/>
+<rect x="966" y="135" width="68" height="42" rx="6" fill="#ffffff" stroke="#087e80" stroke-width="2"/>
+<line x1="1014" y1="140" x2="1014" y2="172" stroke="#087e80" stroke-width="2"/>
+<line x1="976" y1="149" x2="1001" y2="149" stroke="#087e80" stroke-width="2"/>
+<line x1="976" y1="161" x2="994" y2="161" stroke="#087e80" stroke-width="2"/>
+<text x="1000" y="222" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" text-anchor="middle" fill="#18334b">Leo&#x27;s ticket</text>
+<text x="1000" y="278" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" text-anchor="middle" fill="#087e80">800 cents</text>
+<text x="1000" y="326" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="middle" fill="#536b80">Stored price is unchanged</text>
+<text x="600" y="419" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="middle" fill="#536b80">Private data + checked operations preserve the invariant.</text>
+</svg>

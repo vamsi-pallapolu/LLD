@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc"><title id="title">explicit</title><desc id="desc">With an explicit TicketNumber constructor, printLabel(42) is a compile error. printLabel(TicketNumber(42)) deliberately creates the required type and is allowed.</desc>
+<rect x="0" y="0" width="1200" height="440" rx="0" fill="#f6f8fb"/>
+<text x="40" y="49" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#18334b">explicit</text>
+<rect x="40" y="100" width="1120" height="125" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="95" cy="137" r="13" fill="#b83b48"/>
+<rect x="72" y="154" width="46" height="25" rx="12" fill="#b83b48"/>
+<text x="150" y="140" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="start" fill="#536b80">Automatic conversion</text>
+<text x="150" y="186" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" text-anchor="start" fill="#18334b">printLabel(42)</text>
+<line x1="665" y1="165" x2="820" y2="165" stroke="#b83b48" stroke-width="3"/>
+<polygon points="820,165 810,159 810,171" fill="#b83b48"/>
+<rect x="845" y="130" width="280" height="65" rx="16" fill="#fbeaec"/>
+<text x="985" y="172" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" text-anchor="middle" fill="#b83b48">Compile error</text>
+<rect x="40" y="250" width="1120" height="125" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="95" cy="287" r="13" fill="#087e80"/>
+<rect x="72" y="304" width="46" height="25" rx="12" fill="#087e80"/>
+<text x="150" y="290" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="start" fill="#536b80">Deliberate construction</text>
+<text x="150" y="336" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" text-anchor="start" fill="#18334b">printLabel(TicketNumber(42))</text>
+<line x1="665" y1="315" x2="820" y2="315" stroke="#087e80" stroke-width="3"/>
+<polygon points="820,315 810,309 810,321" fill="#087e80"/>
+<rect x="845" y="280" width="280" height="65" rx="16" fill="#e7f5f3"/>
+<text x="985" y="322" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" text-anchor="middle" fill="#087e80">Allowed</text>
+<text x="600" y="419" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="middle" fill="#536b80">An explicit constructor requires a deliberate conversion to TicketNumber.</text>
+</svg>

@@ -26,6 +26,8 @@ For quick visual revision: [public operations and private fields](#class-diagram
 
 A staff member asks the ticket system to change a price. The system checks the new value before accepting it.
 
+![A caller requests a negative price; the ticket rejects the update and keeps Leo's stored price at 800 cents.](../images/encapsulation.svg)
+
 In code:
 
 - The stored price is `private`: outside code cannot change it directly.

@@ -24,6 +24,8 @@ At the museum counter, the receipt printer asks a ticket for:
 
 Those operations describe **what the printer needs**. The ticket handles **how to supply it**.
 
+![Receipt code asks for the visitor and price through the interface while the ticket handles its internal storage or calculation.](../images/abstraction.svg)
+
 The receipt programmer can read the ticket code if needed, but does not need to study it every time a receipt is printed. Calling the price function is enough.
 
 ### 1.1 You already use abstraction in code

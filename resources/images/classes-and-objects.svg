@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc"><title id="title">Classes and objects</title><desc id="desc">One AdmissionTicket class creates separate tickets for Maya and Leo, with independent visitor names and prices.</desc>
+<rect x="0" y="0" width="1200" height="440" rx="0" fill="#f6f8fb"/>
+<text x="40" y="49" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" text-anchor="start" fill="#18334b">Classes and objects</text>
+<rect x="405" y="80" width="390" height="105" rx="16" fill="#e7eefb"/>
+<rect x="430" y="109" width="68" height="42" rx="6" fill="#ffffff" stroke="#2563a6" stroke-width="2"/>
+<line x1="478" y1="114" x2="478" y2="146" stroke="#2563a6" stroke-width="2"/>
+<line x1="440" y1="123" x2="465" y2="123" stroke="#2563a6" stroke-width="2"/>
+<line x1="440" y1="135" x2="458" y2="135" stroke="#2563a6" stroke-width="2"/>
+<text x="520" y="119" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" text-anchor="start" fill="#18334b">AdmissionTicket</text>
+<text x="520" y="153" font-family="Arial, Helvetica, sans-serif" font-size="19" font-weight="400" text-anchor="start" fill="#536b80">visitor_   |   priceCents_</text>
+<line x1="600" y1="185" x2="600" y2="218" stroke="#536b80" stroke-width="3"/>
+<line x1="345" y1="218" x2="855" y2="218" stroke="#536b80" stroke-width="3"/>
+<line x1="345" y1="218" x2="345" y2="250" stroke="#536b80" stroke-width="3"/>
+<polygon points="345,250 339,240 351,240" fill="#536b80"/>
+<line x1="855" y1="218" x2="855" y2="250" stroke="#536b80" stroke-width="3"/>
+<polygon points="855,250 849,240 861,240" fill="#536b80"/>
+<rect x="145" y="250" width="400" height="126" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="193" cy="291" r="13" fill="#2563a6"/>
+<rect x="170" y="308" width="46" height="25" rx="12" fill="#2563a6"/>
+<text x="235" y="292" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" text-anchor="start" fill="#18334b">Maya</text>
+<text x="235" y="328" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="400" text-anchor="start" fill="#2563a6">1500 cents</text>
+<text x="235" y="357" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" fill="#536b80">One AdmissionTicket object</text>
+<rect x="655" y="250" width="400" height="126" rx="16" fill="#ffffff" stroke="#dce4ed" stroke-width="2"/>
+<circle cx="703" cy="291" r="13" fill="#087e80"/>
+<rect x="680" y="308" width="46" height="25" rx="12" fill="#087e80"/>
+<text x="745" y="292" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" text-anchor="start" fill="#18334b">Leo</text>
+<text x="745" y="328" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="400" text-anchor="start" fill="#087e80">800 cents</text>
+<text x="745" y="357" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="400" text-anchor="start" fill="#536b80">One AdmissionTicket object</text>
+<text x="600" y="419" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="400" text-anchor="middle" fill="#536b80">One class definition. Each ticket stores its own state.</text>
+</svg>

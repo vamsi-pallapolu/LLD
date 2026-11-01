@@ -33,6 +33,8 @@ At the receipt counter, the printer asks a ticket, "What is your price?" The tic
 - **Inheritance:** an adult ticket and a child ticket are both kinds of admission ticket.
 - **Polymorphism:** asking any ticket for its price gives the right price for that ticket.
 
+![One receipt calls virtual priceCents and gets the actual ticket's answer: Maya 1500, Leo 800, or Nora 1000 cents.](../images/polymorphism.svg)
+
 In this example, assume the ticket category was chosen correctly at purchase. We are modeling prices, not checking ages or taking payments.
 
 ## 2. Bad vs. good: where should the price decision live?

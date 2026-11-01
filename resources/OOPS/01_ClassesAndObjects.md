@@ -33,6 +33,8 @@ For quick visual revision: [class design](#class-diagram-the-ticket-description)
 
 One ticket class defines the fields and operations; each issued ticket has its own values.
 
+![One AdmissionTicket class creates separate tickets for Maya and Leo, each with its own visitor and price.](../images/classes-and-objects.svg)
+
 ## 2. Why do we need classes?
 
 Suppose you track two tickets without a class:
