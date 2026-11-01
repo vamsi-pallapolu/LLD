@@ -1,0 +1,4 @@
+interface:
+  display_name: "C++ Topic Notes"
+  short_description: "Create topic notes using your Prompts.txt preferences"
+  default_prompt: "Use $cpp-topic-notes to create notes for the C++ topic I name, following Prompts.txt."
