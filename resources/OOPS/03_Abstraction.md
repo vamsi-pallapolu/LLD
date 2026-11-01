@@ -4,7 +4,6 @@
 
 We continue with the same museum admission tickets: Maya pays 1500 cents and Leo pays 800 cents. A receipt needs each visitor's name and price. It does not need to know how a ticket stores those details.
 
-
 ## Contents
 
 1. [Start with the museum receipt](#1-start-with-the-museum-receipt)
@@ -13,7 +12,8 @@ We continue with the same museum admission tickets: Maya pays 1500 cents and Leo
 4. [Common mistakes](#4-common-mistakes)
 5. [A short design checklist](#5-a-short-design-checklist)
 6. [Check your understanding](#6-check-your-understanding)
-7. [Short recap](#7-short-recap)
+
+For quick visual revision: [the ticket interface](#class-diagram-what-the-receipt-can-request) → [receipt call sequence](#sequence-diagram-ask-for-results-then-format-them) → [changing the implementation](#dependency-diagram-same-request-different-storage).
 
 ## 1. Start with the museum receipt
 
@@ -32,9 +32,7 @@ The receipt programmer can read the ticket code if needed, but does not need to 
 printReceipt(adult);
 ```
 
-Someone reading this line understands the request: print a receipt for Maya's ticket. They do not need to read its formatting steps at every call.
-
-A well-named function is already an abstraction. You do not need special C++ keywords every time you use this idea.
+A well-named function provides abstraction without requiring inheritance or an abstract class.
 
 ## 2. Bad vs. good: a receipt that depends on ticket storage
 
@@ -77,9 +75,7 @@ Public fields can suit a simple record that callers are allowed to edit freely. 
 
 ### 2.2 A receipt that asks for ticket details
 
-This complete C++11 program lets the receipt ask for the name and price through functions. To keep that idea visible, it assumes the supplied prices are valid and has no price-changing function. [Encapsulation](02_Encapsulation.md) shows the checks needed when prices can be created or changed.
-
-`const AdmissionTicket&` means the receipt reads the original ticket without copying or changing it. The trailing `const` on the ticket's getters lets them be called through that read-only reference.
+C++11 or newer. This version assumes valid input and has no setter; [Encapsulation](02_Encapsulation.md) covers price validation.
 
 ```cpp
 #include <iostream>
@@ -124,15 +120,33 @@ Maya: 1500 cents
 Leo: 800 cents
 ```
 
-`printReceipt()` calls two ticket functions: `visitor()` returns the name, and `priceCents()` returns the price in cents. The ticket does not print those values; the receipt's `std::cout` line prints them.
-
-An **operation** here means a function the ticket provides. The receipt uses the name and price functions to do its job, so it does not need to read the ticket's private fields.
+The receipt depends on public operations rather than stored fields.
 
 The practice file [2_Abstration.cpp](../../Practice/2_Abstration.cpp) names these functions `getVisitor()` and `getPriceCents()`. They serve the same purpose.
 
+### Class diagram: what the receipt can request
+
+`+` means public, `-` means private; `string` represents `std::string`.
+
+```mermaid
+classDiagram
+    class AdmissionTicket {
+        -string visitor_
+        -int priceCents_
+        +AdmissionTicket(string visitor, int priceCents)
+        +visitor() string
+        +priceCents() int
+    }
+    note for AdmissionTicket "printReceipt uses visitor() and priceCents(). The ticket supplies values; the receipt formats them."
+```
+
+`printReceipt()` is a free function, not a member of the ticket. Its parameter is `const AdmissionTicket&`.
+
+**Recall question:** Does abstraction require a pure virtual function? No—this ordinary class already provides useful requests that hide storage details.
+
 ### 2.3 Read the interface as a set of requests
 
-An **interface** is the set of functions a caller can use, together with what each function promises. This ticket offers two requests: tell me the visitor name and tell me the price in cents.
+An **interface** is the set of public operations and their promises.
 
 | Operation | Meaning in this example |
 |-----------|-------------------------|
@@ -141,16 +155,25 @@ An **interface** is the set of functions a caller can use, together with what ea
 
 C++ has no separate `interface` keyword. An ordinary class's public functions can provide an interface.
 
-### 2.4 Follow the first call
+### Sequence diagram: ask for results, then format them
 
-1. `printReceipt(adult)` asks for Maya's receipt.
-2. `ticket.visitor()` supplies `"Maya"`.
-3. `ticket.priceCents()` supplies 1500.
-4. The receipt formats those results without directly reading the stored fields.
+```mermaid
+sequenceDiagram
+    participant Main as main()
+    participant Receipt as printReceipt(ticket)
+    participant Ticket as adult: AdmissionTicket
+    participant Output as std::cout
 
-The receipt handles formatting. The ticket handles supplying the name and price.
+    Main->>Receipt: printReceipt(adult)
+    Note over Receipt,Ticket: ticket refers to adult; no ticket copy is created
+    Receipt->>Ticket: visitor()
+    Ticket-->>Receipt: Maya
+    Receipt->>Ticket: priceCents()
+    Ticket-->>Receipt: 1500
+    Receipt->>Output: Print Maya: 1500 cents
+```
 
-For constructors, references, and `const`, see [Classes and Objects](01_ClassesAndObjects.md). Access control and checked price changes are explained in [Encapsulation](02_Encapsulation.md).
+**Recall question:** Who decides how the price is calculated, and who prints it? The ticket supplies the price; the receipt prints the result.
 
 ## 3. The key intents
 
@@ -162,7 +185,7 @@ You can read the receipt function without learning the ticket's storage or prici
 
 Today, `priceCents()` returns one stored number. Suppose the museum later stores an admission amount and a booking fee separately. For Maya, 1400 cents plus a 100-cent fee still gives the same 1500-cent total.
 
-The relevant function bodies could change like this. These are separate sketches to put inside the ticket class; the comments describe the fields each version needs:
+Alternative implementations:
 
 ```cpp
 // Earlier version: the ticket stores int priceCents_.
@@ -178,7 +201,20 @@ int priceCents() const {
 }
 ```
 
-The receipt still calls `ticket.priceCents()`. It does not need to know about the two new fields. This change works with an ordinary class; no inheritance or `virtual` function is required.
+The public request and its units stay the same, so the receipt needs no changes. No inheritance or virtual function is required.
+
+### Dependency diagram: same request, different storage
+
+These are alternative implementations at different stages, not two choices the receipt makes at runtime.
+
+```mermaid
+flowchart TB
+    Receipt["printReceipt(ticket)<br/>same caller code"] --> Request["ticket.priceCents()<br/>same promise: total in cents"]
+    Request -.->|"earlier implementation"| Stored["return priceCents_<br/>1500"]
+    Request -.->|"later implementation"| Calculated["return admissionCents_ + bookingFeeCents_<br/>1400 + 100 = 1500"]
+```
+
+**Recall question:** What must stay consistent when storage changes? The public request and its promise, including the units returned.
 
 ## 4. Common mistakes
 
@@ -243,10 +279,6 @@ No. `printReceipt()` and the ordinary ticket class already expose useful operati
 The receipt uses the name and price functions to print its output. It does not directly use the ticket's stored fields or need to understand how those functions produce their results.
 
 </details>
-
-## 7. Short recap
-
-The receipt asks for a visitor name and a price. The ticket decides how to supply them. Those functions let the ticket's storage change while the receipt keeps using the same requests.
 
 ## Sources and further reading
 

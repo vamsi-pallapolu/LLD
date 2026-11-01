@@ -15,15 +15,12 @@ This note uses museum tickets, matching the examples in the [OOP notes](../OOPS/
 5. [Other places explicit can be used](#5-other-places-explicit-can-be-used)
 6. [Common mistakes](#6-common-mistakes)
 7. [Checklist and self-test](#7-checklist-and-self-test)
-8. [Short recap](#8-short-recap)
+
+For quick visual revision: [which conversions compile](#flowchart-automatic-conversion-versus-direct-creation) → [why a temporary ticket has different state](#object-diagram-a-name-creates-a-new-ticket).
 
 ## 1. The problem: a value becomes an object automatically
 
-A **constructor** sets up a new object. A constructor that accepts one argument can also let C++ create an object automatically when a function needs that object's type.
-
-An **implicit conversion** is a conversion C++ performs without you writing the object creation. If `printLabel()` needs a `TicketNumber` and you pass the integer `42`, C++ may create `TicketNumber(42)` for you.
-
-Think of the museum counter: a number can identify a ticket, but it is useful for code to say clearly that it is passing a ticket number. `explicit` makes that choice visible.
+A converting constructor lets C++ create an object when a function expects that class but receives another type. `explicit` requires the caller to request that construction deliberately.
 
 ## 2. Without explicit vs. with explicit
 
@@ -62,14 +59,7 @@ Ticket number: 42
 Ticket number: 7
 ```
 
-Here is what `printLabel(42)` does:
-
-1. The function parameter requires a `TicketNumber`.
-2. The supplied value, `42`, is an `int`.
-3. The constructor accepts an `int`, so C++ uses it to create a `TicketNumber`.
-4. The function receives that new object and reads its value.
-
-Nothing is necessarily wrong with this output. The design question is whether you want a plain number to be accepted automatically wherever a ticket number is expected.
+`printLabel(42)` implicitly creates a `TicketNumber` from the integer. Decide whether this automatic conversion makes sense for the type.
 
 ### 2.2 With explicit: write the object creation yourself
 
@@ -113,19 +103,21 @@ Ticket number: 7
 
 `explicit` changes which calls compile. It does not change the stored number or the printed labels.
 
-### 2.3 Read the syntax
+### Flowchart: automatic conversion versus direct creation
 
-| Code | Meaning |
-|------|---------|
-| `explicit TicketNumber(int value)` | Require callers to deliberately create a ticket number from an integer |
-| `: value_(value)` | Give the stored field the supplied starting value |
-| `private: int value_` | Keep the number in a field callers cannot edit directly |
-| `int value() const` | Return a copy of the number without changing the object |
-| `printLabel(TicketNumber number)` | Accept a ticket-number object by value |
-| `std::cout << ...` | Print the supplied values |
-| `'\n'` | Start the next output line |
+This compares the two `TicketNumber` constructors above. The rejected branch is a compile error; it does not reach `printLabel()` at runtime.
 
-`value_` is the stored number; `value` is the constructor input. The trailing `_` is a naming convention, not a language requirement.
+```mermaid
+flowchart TB
+    Bare["printLabel(42)<br/>supplied type: int; required type: TicketNumber"] --> Constructor{"Constructor explicit?"}
+    Constructor -->|"No"| Convert["Compiler allows int to TicketNumber conversion"]
+    Convert --> Automatic["Function receives TicketNumber with value 42"]
+    Constructor -->|"Yes"| Reject["Compile error<br/>automatic conversion blocked"]
+    Direct["printLabel(TicketNumber(42))"] --> Deliberate["Directly create TicketNumber with value 42"]
+    Deliberate --> Allowed["Function call works with either constructor"]
+```
+
+**Recall question:** Does `explicit` stop construction from an integer? It stops this automatic conversion; writing `TicketNumber(42)` still works.
 
 ## 3. Which ways of creating an object still work?
 
@@ -142,11 +134,7 @@ Using the explicit class above:
 | `printLabel(42);` | No | The argument needs an automatic integer-to-ticket conversion |
 | `TicketNumber number = TicketNumber(42);` | Yes | The value on the right is already a deliberately created ticket number |
 
-These are separate alternatives; do not declare the same variable repeatedly in one scope.
-
 ### 3.2 Initialization names describe these forms
-
-**Initialization** means giving a newly created variable its starting value.
 
 - **Direct initialization:** `TicketNumber number(42)` or `TicketNumber number{42}` directly gives the constructor its argument. An explicit constructor is allowed.
 - **Copy initialization:** `TicketNumber number = 42` asks C++ to initialize from the value on the right. An explicit constructor cannot perform that integer-to-ticket conversion [2].
@@ -206,16 +194,21 @@ Maya: not admitted
 Maya: admitted
 ```
 
-`const AdmissionTicket&` reads a ticket without copying or changing it. It can also refer to a temporary ticket for the duration of the function call.
+`printAdmissionStatus(name)` constructs a fresh ticket with no entry recorded; it does not look up `actual`. The temporary survives the call and is destroyed at the end of the call expression.
 
-For the first status call:
+### Object diagram: a name creates a new ticket
 
-1. The function needs an admission ticket, but `name` is a string.
-2. The non-explicit constructor lets C++ create a new ticket from that string.
-3. Every new ticket starts with `admitted_ = false`, so the status says “not admitted.”
-4. The temporary ticket is destroyed after that call expression finishes.
+This follows the non-explicit constructor example above. The two status calls read different objects, even though both visitor names are Maya.
 
-C++ did not look up Maya's existing ticket. The second call uses `actual`, whose entry flag is already `true`.
+```mermaid
+flowchart TB
+    Name["name: std::string<br/>Maya"] -->|"implicit constructor conversion"| Temporary["New temporary AdmissionTicket<br/>visitor_ = Maya<br/>admitted_ = false"]
+    Temporary --> First["printAdmissionStatus(name)<br/>prints Maya: not admitted"]
+    First --> Cleanup["Temporary destroyed after the call expression"]
+    Actual["actual: AdmissionTicket<br/>visitor_ = Maya<br/>admitted_ = true after actual.admit()"] --> Second["printAdmissionStatus(actual)<br/>prints Maya: admitted"]
+```
+
+**Recall question:** Does converting a name find the existing ticket? No—it creates a fresh object. Pass `actual` to read its recorded entry.
 
 Replacing the constructor declaration with this version catches the mistaken string argument:
 
@@ -224,8 +217,6 @@ explicit AdmissionTicket(const std::string& visitor) : visitor_(visitor) {}
 ```
 
 Now `printAdmissionStatus(name)` fails to compile. Pass `actual` when you want its status. Writing `AdmissionTicket(name)` is still allowed if you intentionally want to create a new ticket.
-
-In the printing expression, `condition ? first : second` chooses `first` when the condition is true and `second` otherwise. Here it chooses the admitted or not-admitted message.
 
 ## 5. Other places explicit can be used
 
@@ -301,8 +292,6 @@ Output:
 Ticket accepted
 1
 ```
-
-`bool` stores `true` or `false`. `static_cast<bool>(result)` explicitly requests the conversion. Printing `true` with the default `std::cout` settings displays `1`.
 
 `explicit operator bool()` still works in conditions such as `if (result)`, but prevents unrelated automatic conversions such as treating the check as an integer [1].
 
@@ -385,10 +374,6 @@ Yes. A constructor taking a name and a default price can still be called with ju
 C++ specifically allows this explicit conversion in conditions. It still rejects automatic conversion in forms such as `bool accepted = result`.
 
 </details>
-
-## 8. Short recap
-
-Use `explicit` when callers should deliberately create an object from another value. `TicketNumber(42)` works; automatically turning `42` into a ticket number does not. The same rule can prevent a visitor name from silently becoming a fresh admission ticket.
 
 ## Sources and further reading
 

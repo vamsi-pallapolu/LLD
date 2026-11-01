@@ -12,7 +12,6 @@ The inheritance chapter shared the visitor name and entrance rule. Adult and chi
 
 Here, the base declares a virtual price function, and each ticket class supplies its answer. We can then use the receipt function from [Abstraction](03_Abstraction.md) for every category. Each complete program is independent and focuses on pricing; it leaves out entrance and tour tracking.
 
-
 ## Contents
 
 1. [A real-world analogy: museum tickets](#1-a-real-world-analogy-museum-tickets)
@@ -22,7 +21,8 @@ Here, the base declares a virtual price function, and each ticket class supplies
 5. [Common mistakes](#5-common-mistakes)
 6. [A short design checklist](#6-a-short-design-checklist)
 7. [Self-test](#7-self-test)
-8. [Short recap](#8-short-recap)
+
+For quick visual revision: [the virtual price contract](#class-diagram-one-price-request-three-implementations) → [runtime dispatch](#sequence-diagram-the-actual-object-supplies-the-price) → [overloading versus overriding](#decision-diagram-when-is-the-function-chosen).
 
 ## 1. A real-world analogy: museum tickets
 
@@ -91,17 +91,7 @@ Virtual functions become useful when categories calculate their answers differen
 
 `AdmissionTicket` is the **base class**, which declares the functions shared by every ticket. `AdultTicket` and `ChildTicket` are **derived classes**, which build on that base and supply their own price functions.
 
-This complete C++11 program produces the same receipts. The important new words are:
-
-- `virtual`: let a call through a base reference choose the actual ticket's function.
-- `= 0`: the base requires a price function but supplies no answer of its own.
-- `override`: check that the derived price function correctly replaces the base's virtual function.
-
-Because the base leaves the price unanswered, it is an **abstract class**: you can create adult and child tickets, but not a plain `AdmissionTicket`. The code uses base references to read those actual tickets.
-
-A **reference**, written with `&`, uses an existing object instead of making a copy. `const AdmissionTicket&` lets the receipt read the original ticket without changing it. The public functions it can call are the ticket's **interface**.
-
-The trailing `const` on `priceCents()` means that asking for the price does not change the ticket's stored fields. `: AdmissionTicket(visitor)` passes the name to the base constructor, which sets up the shared part of the ticket.
+C++11 or newer. The base declares `priceCents()` as pure virtual (`= 0`); each concrete ticket supplies an override. The base is abstract and cannot be instantiated.
 
 ```cpp
 #include <iostream>
@@ -168,46 +158,88 @@ Leo: 800 cents
 
 Prices are stored as whole cents so the example avoids decimal rounding problems.
 
-### 2.3 Read the new syntax
+### Class diagram: one price request, three implementations
 
-`: public AdmissionTicket` means "is a kind of `AdmissionTicket`", as explained in [Inheritance](04_Inheritance.md). The other parts:
+Section 2.2 design with the senior-ticket extension from section 2.4. `+` means public, `#` means protected, `-` means private; `string` represents `std::string`. All price methods are `const`.
 
-| Code | Plain meaning |
-|------|---------------|
-| `: AdmissionTicket(visitor)` | Build the base part of the ticket first, passing it the visitor's name |
-| `private: std::string visitor_` | Store the name privately in the base; adult and child functions read it through `visitor()` |
-| `virtual int priceCents() const` | When called through an `AdmissionTicket&`, use the version belonging to the actual ticket |
-| `= 0` | Require derived ticket classes to supply this function before objects of those classes can be created; this declaration is a **pure virtual function** |
-| `override` | Ask the compiler to confirm this function really replaces a virtual function from the base class |
-| `virtual ~AdmissionTicket() = default` | Use C++'s generated destructor and make deletion through a base pointer clean up the actual ticket type |
-| `protected:` | Let derived ticket constructors call this base constructor while preventing outside code from calling it directly |
+```mermaid
+classDiagram
+    direction TB
+    class AdmissionTicket {
+        <<abstract>>
+        -string visitor_
+        #AdmissionTicket(string visitor)
+        +~AdmissionTicket()
+        +visitor() string
+        +priceCents() int*
+    }
+    class AdultTicket {
+        +AdultTicket(string visitor)
+        +priceCents() int
+    }
+    class ChildTicket {
+        +ChildTicket(string visitor)
+        +priceCents() int
+    }
+    class SeniorTicket {
+        +SeniorTicket(string visitor)
+        +priceCents() int
+    }
+    AdmissionTicket <|-- AdultTicket : public inheritance
+    AdmissionTicket <|-- ChildTicket : public inheritance
+    AdmissionTicket <|-- SeniorTicket : public inheritance
+    note for AdmissionTicket "priceCents() is pure virtual (= 0); * marks an abstract method. Destructor is virtual. visitor() is non-virtual."
+    note for AdultTicket "priceCents() overrides the base request; returns 1500."
+    note for ChildTicket "priceCents() overrides the base request; returns 800."
+    note for SeniorTicket "priceCents() overrides the base request; returns 1000."
+```
 
-`AdultTicket` and `ChildTicket` are **concrete classes**, meaning you can create objects from them. Each supplies the missing `priceCents()` function.
+`printReceipt(const AdmissionTicket& ticket)` uses the shared interface. It is a free function, so it is not a class box.
 
-`protected` controls who may call the constructor; `= 0` makes the class abstract. Even making the base constructor public would not let you create a plain admission object while its price function remains pure virtual.
+**Recall question:** Why can't you create a plain `AdmissionTicket` here? Its pure virtual price request has no implementation in the base.
 
-A **destructor** is the cleanup function whose name begins with `~`. A **pointer** stores an object's address. The virtual destructor matters if a base pointer later deletes an adult or child ticket; section 5 explains that case.
+### 2.3 Dynamic dispatch
 
-### 2.4 Follow the first call
+`virtual` selects an implementation using the actual object type. `override` checks that the derived declaration matches the base request.
 
-1. `AdultTicket adult("Maya")` creates an adult ticket. Its base part stores `"Maya"`.
-2. `printReceipt(adult)` receives the ticket as `const AdmissionTicket&`. It refers to the existing adult ticket; nothing is copied.
-3. `ticket.visitor()` is an ordinary function shared by all tickets. It returns `"Maya"`.
-4. `ticket.priceCents()` is virtual. C++ checks what kind of ticket this really is, finds an `AdultTicket`, and runs `AdultTicket::priceCents()`, which returns 1500.
-5. Passing `child` to the same function runs `ChildTicket::priceCents()` instead.
+- **Static type:** `const AdmissionTicket&`, as declared by the receipt parameter.
+- **Dynamic type:** `AdultTicket` or `ChildTicket`, depending on the object passed.
 
-**Dynamic dispatch** means choosing a virtual function's version while the program runs, based on the actual object. For `printReceipt(adult)`, C++ chooses the adult price function; for `printReceipt(child)`, it chooses the child price function.
+`priceCents()` uses dynamic dispatch; non-virtual `visitor()` uses the base implementation. The protected constructor controls access; the pure virtual method makes the class abstract.
 
-Two terms help here:
+### Sequence diagram: the actual object supplies the price
 
-- The **static type** is the type written in the code: `printReceipt` declares its parameter as `const AdmissionTicket&`.
-- The **dynamic type** is the type of the object that actually arrives: `AdultTicket` on the first call, `ChildTicket` on the second.
+The receipt has the same parameter type on both calls. The actual object differs, so the virtual price call reaches a different override.
 
-For `ticket.priceCents()`, `virtual` makes the actual object type choose the answer. For the non-virtual `ticket.visitor()`, the admission reference uses the function declared in `AdmissionTicket`.
+```mermaid
+sequenceDiagram
+    participant Main as main()
+    participant Receipt as printReceipt(const AdmissionTicket&)
+    participant Adult as adult: AdultTicket
+    participant Child as child: ChildTicket
 
-### 2.5 Add a new category
+    Main->>Receipt: printReceipt(adult)
+    Note over Receipt,Adult: Static parameter type: const AdmissionTicket&; actual object: AdultTicket
+    Receipt->>Adult: visitor() uses AdmissionTicket's implementation
+    Adult-->>Receipt: Maya
+    Receipt->>Adult: virtual priceCents() dispatches to AdultTicket
+    Adult-->>Receipt: 1500
+    Note over Receipt: Prints Maya: 1500 cents
 
-Place this class before `main()` in the good program:
+    Main->>Receipt: printReceipt(child)
+    Note over Receipt,Child: Static parameter type: const AdmissionTicket&; actual object: ChildTicket
+    Receipt->>Child: visitor() uses AdmissionTicket's implementation
+    Child-->>Receipt: Leo
+    Receipt->>Child: virtual priceCents() dispatches to ChildTicket
+    Child-->>Receipt: 800
+    Note over Receipt: Prints Leo: 800 cents
+```
+
+**Recall question:** Does inheriting `visitor()` make it virtual? No—only the declared virtual price request uses runtime dispatch here.
+
+### 2.4 Add a new category
+
+Extension to the program above:
 
 ```cpp
 class SeniorTicket : public AdmissionTicket {
@@ -221,7 +253,7 @@ public:
 };
 ```
 
-Then add these lines inside `main()`:
+Usage:
 
 ```cpp
 SeniorTicket senior("Nora");
@@ -284,11 +316,9 @@ Polymorphism only works if each version of `priceCents()` means the same thing. 
 
 ### 4.1 Overloading is different from overriding
 
-Overloading gives one name to functions taking different arguments. Overriding supplies a derived version of a virtual base function. The examples below show why the distinction matters.
+**Overloading** uses the same name with different parameter lists; changing only the return type is insufficient. **Overriding** supplies a derived implementation of a virtual base method, with a matching signature and qualifiers [3].
 
-**Function overloading** means defining functions with the same name but different input parameters. The compiler uses the supplied inputs to choose one. Changing only the return type does not create a valid overload.
-
-This separate, complete example prints a ticket label by number or by visitor name:
+Separate overloading example:
 
 ```cpp
 #include <iostream>
@@ -315,11 +345,24 @@ Ticket number: 42
 Visitor: Maya
 ```
 
-`42` is an `int`, so the first version runs. `std::string("Maya")` is a `std::string`, so the second runs. No base class or virtual function is involved.
+### Decision diagram: when is the function chosen?
 
-**Function overriding** means supplying a derived-class version of a virtual base function [3]. Here, the function name, parameters, and trailing `const` must match. `AdultTicket::priceCents() const` is the adult version of the base request.
+These branches summarize the two examples above. For overloading, the compiler uses argument types and the overload rules. For the virtual price call, runtime dispatch uses the actual object's type.
 
-`printLabel(int)` and `printLabel(const std::string&)` are overloads because their inputs differ. Adult and child `priceCents()` functions are overrides because each replaces the same virtual base request.
+```mermaid
+flowchart TB
+    subgraph CompileTime["Overloading: chosen during compilation"]
+        IntCall["printLabel(42)"] --> IntVersion["printLabel(int)"]
+        StringCall["printLabel(std::string with value Maya)"] --> StringVersion["printLabel(const std::string&amp;)"]
+    end
+    subgraph Runtime["Overriding: chosen at runtime for this virtual call"]
+        BaseCall["ticket.priceCents()<br/>through const AdmissionTicket&amp;"] --> Actual{"Actual object type?"}
+        Actual -->|"AdultTicket"| AdultPrice["AdultTicket::priceCents()<br/>1500"]
+        Actual -->|"ChildTicket"| ChildPrice["ChildTicket::priceCents()<br/>800"]
+    end
+```
+
+**Recall question:** What separates the two? Overloading selects among different parameter lists; overriding supplies a derived implementation of the same virtual request.
 
 ## 5. Common mistakes
 
@@ -345,7 +388,7 @@ In our example, `void printReceipt(AdmissionTicket ticket)` does not even compil
 
 ### 5.4 Missing a virtual destructor
 
-A **destructor** is the cleanup function that runs when an object goes away. If a program creates an `AdultTicket` with `new` and later deletes it through an `AdmissionTicket*`, the base destructor must be virtual. Otherwise the behavior is **undefined**: C++ makes no promise about what happens.
+Deleting an `AdultTicket` through an `AdmissionTicket*` requires a virtual base destructor; otherwise behavior is undefined.
 
 The same applies to `std::unique_ptr<AdmissionTicket>`, a smart pointer that deletes the ticket for you. Our example uses local objects, but the virtual destructor keeps the class safe for those other uses [6].
 
@@ -440,10 +483,6 @@ When the kinds differ only by data, such as a price number, and not by behavior.
 Overloading means several same-named functions with different parameters; the compiler picks one from the arguments. Overriding means a derived class replaces a base virtual function; the program picks the version at runtime from the actual object.
 
 </details>
-
-## 8. Short recap
-
-The receipt asks every ticket for its price through `AdmissionTicket&`. `virtual` makes that request use the actual ticket's answer, and `override` checks each derived declaration. Adding a senior ticket leaves the receipt unchanged.
 
 ## Sources and further reading
 

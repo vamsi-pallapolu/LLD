@@ -6,7 +6,6 @@
 
 We continue with the museum's `AdmissionTicket` from [Classes and Objects](01_ClassesAndObjects.md): Maya's ticket starts at 1500 cents and Leo's at 800 cents. This note focuses on the rule that a ticket price must never be negative. Zero is valid for a free ticket.
 
-
 ## Contents
 
 1. [Think of changing a ticket at the museum counter](#1-think-of-changing-a-ticket-at-the-museum-counter)
@@ -15,12 +14,13 @@ We continue with the museum's `AdmissionTicket` from [Classes and Objects](01_Cl
 4. [Private alone is not enough](#4-private-alone-is-not-enough)
 5. [Reading data without giving away control](#5-reading-data-without-giving-away-control)
 6. [The key intents](#6-the-key-intents)
-7. [Ask for an action instead of repeating its steps](#7-ask-for-an-action-instead-of-repeating-its-steps)
+7. [Request a checked action](#7-request-a-checked-action)
 8. [How is this different from abstraction?](#8-how-is-this-different-from-abstraction)
 9. [Common mistakes](#9-common-mistakes)
 10. [Before writing the class](#10-before-writing-the-class)
 11. [Check your understanding](#11-check-your-understanding)
-12. [Short recap](#12-short-recap)
+
+For quick visual revision: [public operations and private fields](#class-diagram-the-controlled-access-points) → [validation before assignment](#31-validation-before-assignment) → [reading a value copy](#object-diagram-reading-does-not-give-write-access).
 
 ## 1. Think of changing a ticket at the museum counter
 
@@ -65,13 +65,7 @@ With a public field, `adult.priceCents = -100` stores the negative number immedi
 
 ## 3. Put the checks inside the class
 
-This uses the ticket class from [Classes and Objects](01_ClassesAndObjects.md). The new `main()` makes Maya's ticket free, then tries to give Leo a negative price.
-
-An **exception** reports an error and stops the current operation. `throw` reports it, and a matching `catch` handles it. Our `catch` prints the error so the program can continue. The program requires C++11 or newer.
-
-A **constructor** sets up a new object. A **setter** is a function that changes a stored value. Our constructor checks the starting price, and our setter checks each requested new price.
-
-`const std::string&` reads the supplied name without changing or copying that input; the ticket then stores its own copy. The trailing `const` on `visitor()` and `priceCents()` means those functions read the ticket without changing its fields.
+C++11 or newer. This uses the ticket class from [Classes and Objects](01_ClassesAndObjects.md): starting prices and price changes must be nonnegative.
 
 ```cpp
 #include <iostream>
@@ -83,15 +77,15 @@ public:
     AdmissionTicket(const std::string& visitor, int priceCents)
         : visitor_(visitor), priceCents_(priceCents) {
         if (priceCents_ < 0) {
-            throw std::invalid_argument("Price must not be negative"); // Refuse to create an invalid ticket.
+            throw std::invalid_argument("Price must not be negative");
         }
     }
 
     void setPriceCents(int priceCents) {
         if (priceCents < 0) {
-            throw std::invalid_argument("Price must not be negative"); // Stop before changing the old price.
+            throw std::invalid_argument("Price must not be negative");
         }
-        priceCents_ = priceCents; // Store the new price only after it passes the check.
+        priceCents_ = priceCents;
     }
 
     std::string visitor() const {
@@ -137,44 +131,49 @@ Price must not be negative
 Leo: 800 cents
 ```
 
-### 3.1 Follow the example
+### Class diagram: the controlled access points
 
-1. Each constructor checks the starting price.
-2. `adult.setPriceCents(0)` makes Maya's ticket free. Zero satisfies the rule.
-3. `child.setPriceCents(-100)` throws an exception before changing Leo's price.
-4. The `catch` block handles that exception and prints its message, so execution continues.
-5. Leo's price is still 800 cents.
+`+` means public, `-` means private; `string` represents `std::string`.
 
-A negative starting price is rejected too. For example, `AdmissionTicket invalid("Maya", -100)` would throw during construction, so no completed ticket object would be created.
+```mermaid
+classDiagram
+    class AdmissionTicket {
+        -string visitor_
+        -int priceCents_
+        +AdmissionTicket(string visitor, int priceCents)
+        +setPriceCents(int priceCents) void
+        +visitor() string
+        +priceCents() int
+    }
+    note for AdmissionTicket "Invariant: priceCents_ >= 0. Outside code uses public functions; it cannot assign to private fields."
+```
 
-### 3.2 Read the C++ syntax
+**Recall question:** Does `private` alone keep the price valid? No—the constructor and every operation that changes the price must enforce the invariant.
 
-| Code | Plain meaning |
-|------|---------------|
-| `private:` | Outside code cannot directly access the listed data |
-| `public:` | Outside code can call the listed functions |
-| `: visitor_(visitor), priceCents_(priceCents)` | Store the supplied name and starting price before the constructor body runs |
-| `priceCents < 0` | Check whether the requested price is negative |
-| `void setPriceCents(int priceCents)` | Request a price change without returning a result |
-| `int priceCents() const` | Read the price without changing the ticket |
-| `throw std::invalid_argument(...)` | Report an invalid request as an exception |
-| `try` / `catch` | Run the code in `try`; if the named error is thrown, handle it in `catch` |
+A failed constructor leaves no completed ticket. A rejected setter request leaves the existing price unchanged.
 
-`error.what()` returns the exception's message, such as `"Price must not be negative"`. `<stdexcept>` provides `std::invalid_argument`, the error type used here. If no matching handler catches a thrown exception, the program stops.
+### 3.1 Validation before assignment
 
-The trailing `_` in `priceCents_` marks a stored field by naming convention. `priceCents`, without `_`, is the requested new value. The setter checks that request before assigning it to the stored field.
+```mermaid
+flowchart TD
+    Request["setPriceCents(requested price)"] --> Check{"Requested price < 0?"}
+    Check -->|"Yes: child.setPriceCents(-100)"| Reject["Throw std::invalid_argument<br/>stored price remains 800"]
+    Reject --> Handler["Caller's catch prints the error<br/>execution continues"]
+    Check -->|"No: adult.setPriceCents(0)"| Accept["Assign priceCents_ = requested price<br/>Maya's price becomes 0"]
+    Accept --> Return["Return normally"]
+```
 
-### 3.3 What can outside code do?
+**Recall question:** Why does Leo's price remain 800? The setter throws before the assignment.
 
-It can request a checked change through `setPriceCents()`, or read values through `visitor()` and `priceCents()`.
+### 3.2 Public operations
 
-This direct change is intentionally invalid and is rejected by the compiler:
+Outside code uses the checked setter and read-only getters.
+
+Intentional compile error:
 
 ```cpp
 child.priceCents_ = -100; // Error: priceCents_ is private.
 ```
-
-The checks belong inside the ticket. Code using it only needs to request the change and handle a possible rejection.
 
 ## 4. Private alone is not enough
 
@@ -207,6 +206,19 @@ chosen = -100;
 
 Changing `chosen` does not change `child`. They are separate values.
 
+### Object diagram: reading does not give write access
+
+This shows the state after the two lines above, using Leo's 800-cent ticket.
+
+```mermaid
+flowchart LR
+    Stored["child's private priceCents_<br/>still 800"] -->|"priceCents() returns an int copy"| Local["chosen: local int<br/>changed from 800 to -100"]
+```
+
+There is no reference back to the field: assigning to `chosen` changes only the local number.
+
+**Recall question:** Why would returning `int&` be different? It would let callers write directly to the stored price and bypass the setter's check.
+
 Be careful about replacing the getter with this version:
 
 ```cpp
@@ -215,43 +227,23 @@ int& priceCents() {
 }
 ```
 
-The `&` means a **reference**: another name for the actual stored number. Outside code could then write `child.priceCents() = -100` and bypass the checks.
+`child.priceCents() = -100` would then bypass validation by assigning through the returned reference.
 
 Returning an `int` gives the caller a separate number, so changing it cannot change the ticket. A function returning `const int&` would let the caller read the stored number through a reference but not assign to it through that reference. For this small number, a copy is simpler.
 
 ## 6. The key intents
 
-### 6.1 Fewer checks to repeat
+- Centralize validation in the class instead of repeating checks in callers.
+- Keep all state-changing operations responsible for the invariant.
+- Return value copies when callers do not need access to internal storage.
 
-Callers use `setPriceCents()` and handle rejection. They do not have to duplicate its validation to protect the ticket.
-
-### 6.2 Easier changes
-
-Suppose the ticket later calculates its price instead of storing it. If `priceCents()` still returns a nonnegative price in cents, code that reads it can keep working. We make that change in the inheritance and polymorphism notes.
-
-The setter belongs to this editable-price version. A future fixed-category design can remove price editing; callers that use the setter would then need to change.
-
-### 6.3 A clearer place to look for mistakes
-
-If the stored price becomes negative, inspect the class's constructor and functions that can change it. The allowed ways to change the value are gathered in one place.
-
-## 7. Ask for an action instead of repeating its steps
-
-Without a checked operation, outside code might repeat:
-
-```text
-Check whether the requested ticket price is negative.
-If it is, report an error.
-Otherwise, store the new price.
-```
-
-With the class, it calls:
+## 7. Request a checked action
 
 ```cpp
 child.setPriceCents(800);
 ```
 
-The class handles validation. Reading is still useful: a receipt needs `priceCents()` to display the price. Encapsulation keeps the rules for changing it inside the ticket.
+Callers request changes; the class validates them. A fixed-category design may remove the setter, which would require changes to callers that edit prices.
 
 ## 8. How is this different from abstraction?
 
@@ -259,8 +251,6 @@ The class handles validation. Reading is still useful: a receipt needs `priceCen
 |------|--------------------|----------------|
 | **Encapsulation** | Keeping price changes under the ticket's control | `priceCents_` is private and changes go through a checked setter |
 | **Abstraction** | Letting receipt code request a price without learning how it is produced | A receipt calls `priceCents()` without knowing how the price is stored or calculated |
-
-Encapsulation decides who can change the price and what checks a change must pass. Abstraction lets the receipt ask for the price without learning how the ticket stores or calculates it.
 
 See [Abstraction](03_Abstraction.md) for the next topic.
 
@@ -328,10 +318,6 @@ Returning `int` gives the caller a copy. Returning `int&` lets the caller change
 No. It can suit freely editable data. Use checked operations when changes must follow rules; a struct can also have private members and functions if explicitly declared that way.
 
 </details>
-
-## 12. Short recap
-
-Keep the price private and check it when a ticket is created or changed. Let callers read a copy through `priceCents()`. A negative request is rejected before the stored price changes.
 
 ## Sources and further reading
 

@@ -9,13 +9,15 @@ We continue the museum example from [Abstraction](03_Abstraction.md). Maya has a
 1. [Meaning and basic syntax](#1-meaning-and-basic-syntax)
 2. [The museum-ticket model](#2-the-museum-ticket-model)
 3. [Without inheritance vs. with inheritance](#3-without-inheritance-vs-with-inheritance)
-4. [How the program works](#4-how-the-program-works)
+4. [Object structure and behavior](#4-object-structure-and-behavior)
 5. [Access rules](#5-access-rules)
 6. [Construction and destruction](#6-construction-and-destruction)
 7. [Forms of inheritance](#7-forms-of-inheritance)
 8. [Design rules and object slicing](#8-design-rules-and-object-slicing)
 9. [Inheritance and polymorphism](#9-inheritance-and-polymorphism)
 10. [Review and self-test](#10-review-and-self-test)
+
+For a quick visual revision, follow the [class diagram](#lld-class-diagram) → [admission and tour sequence](#41-admission-and-tour-sequence) → [each object's stored state](#42-each-ticket-has-its-own-base-part) → [copying versus referencing](#83-avoid-slicing-when-working-with-derived-objects).
 
 ## 1. Meaning and basic syntax
 
@@ -27,22 +29,7 @@ We continue the museum example from [Abstraction](03_Abstraction.md). Maya has a
 - **Derived class:** the class you create from that base. `AdultTicket` uses the stored name and adds an adult price.
 - **Public inheritance:** code that accepts an admission ticket can also accept an adult ticket.
 
-A **class** describes what its objects store and what they can do. An **object** is one actual instance, such as Maya's ticket. A class's stored variables and functions are called its **members**.
-
-A **constructor** is the function that sets up a new object. It has the same name as its class.
-
-In this small example, `<string>` provides `std::string`, the C++ type used to store text. These keywords explain the short class definitions below:
-
-| Code | What it tells C++ |
-|------|------------------|
-| `public:` | Other code can call the functions listed here |
-| `private:` | Only this class's own functions can directly use the fields listed here in this example |
-| `explicit` | Create a ticket deliberately; do not automatically treat a visitor name as a ticket |
-| `const std::string& visitor` | Read the supplied name without copying or changing the supplied string |
-| `visitor() const` | This function reads the ticket without changing its stored fields |
-| `return visitor_` | Give the stored name back to the caller |
-
-The small example:
+Minimal example:
 
 ```cpp
 class AdmissionTicket {
@@ -62,38 +49,19 @@ public:
 
 // Inside a function:
 AdultTicket adult("Maya");
-adult.visitor();    // Returns "Maya" by using the base class's function.
-adult.priceCents(); // Returns 1500 by using the adult class's function.
+adult.visitor();    // Inherited: "Maya".
+adult.priceCents(); // Added by AdultTicket: 1500.
 ```
 
 `AdultTicket` gets `visitor()` from `AdmissionTicket`, so it can read Maya's name without defining that function again. It adds `priceCents()` to return the adult price.
 
-`AdmissionTicket(visitor)` passes the name to the base constructor. The base constructor stores that name in `visitor_`. The trailing `_` is just a naming convention for a stored variable; it is not a C++ rule.
+`AdmissionTicket(visitor)` initializes the base part. Public inheritance makes `AdultTicket` usable through `AdmissionTicket&`.
 
-These two function calls return values. They do not print anything; use `std::cout` when you want to display the returned values.
-
-### 1.2 Read the inheritance declaration
-
-```cpp
-class AdultTicket : public AdmissionTicket {
-    // Add functions or data that belong to adult tickets here.
-};
-```
-
-| Part | Meaning |
-|------|---------|
-| `AdultTicket` | The new class being defined |
-| `:` | Starts the list of classes this class inherits from |
-| `public` | Lets other code use an adult ticket wherever an admission ticket is accepted |
-| `AdmissionTicket` | The existing class being inherited from |
-
-This shows only the inheritance line. It is a separate sketch, not a second definition to add to the earlier code.
-
-### 1.3 The intuitive relationship: “is-a”
+### 1.2 The “is-a” relationship
 
 An adult ticket **is an** admission ticket: it must do everything the entrance expects an admission ticket to do. A guided-tour ticket makes the same promise and also provides a tour.
 
-A **reference**, written with `&`, is another name for an existing object. `AdmissionTicket&` lets the entrance work with an adult or tour ticket through the functions declared in `AdmissionTicket`. The reference does not create a copy.
+`AdmissionTicket&` exposes the base interface without copying the derived object.
 
 Use inheritance when both ideas fit: the new class is a kind of the base class, and code written for the base can sensibly use the new class [2].
 
@@ -120,21 +88,56 @@ Assume the visitors already bought valid tickets and Eva arrives for her booked 
 | `ChildTicket` | Keeps its name and entry record in its base part | Adds `priceCents()` to return 800 cents |
 | `GuidedTourTicket` | Keeps its name and entry record in its base part; adds a tour time and whether it has joined the tour | Adds `slot()` to read the booked time and `joinTour()` to try checking into the tour |
 
-```text
-                   AdmissionTicket
-                  /       |       \
-         AdultTicket  ChildTicket  GuidedTourTicket
+#### LLD class diagram
+
+Section 3.2 class design. `+` means public, `-` means private; `string` represents `std::string`.
+
+```mermaid
+classDiagram
+    direction TB
+
+    class AdmissionTicket {
+        -string visitor_
+        -bool admitted_ = false
+        +AdmissionTicket(string visitor)
+        +visitor() string
+        +admit() bool
+        +isAdmitted() bool
+    }
+
+    class AdultTicket {
+        +AdultTicket(string visitor)
+        +priceCents() int
+    }
+
+    class ChildTicket {
+        +ChildTicket(string visitor)
+        +priceCents() int
+    }
+
+    class GuidedTourTicket {
+        -string slot_
+        -bool joinedTour_ = false
+        +GuidedTourTicket(string visitor, string slot)
+        +slot() string
+        +joinTour() bool
+    }
+
+    AdmissionTicket <|-- AdultTicket : public inheritance
+    AdmissionTicket <|-- ChildTicket : public inheritance
+    AdmissionTicket <|-- GuidedTourTicket : public inheritance
+
+    note for AdmissionTicket "admit(): first entry succeeds; repeat entry fails."
+    note for AdultTicket "priceCents(): returns 1500."
+    note for ChildTicket "priceCents(): returns 800."
+    note for GuidedTourTicket "joinTour(): requires museum admission; succeeds once."
 ```
 
-Each line in the diagram connects a derived ticket to its base. All three ticket classes inherit from `AdmissionTicket`.
+The hollow triangle points to the base class. Each derived ticket inherits the public admission operations and contains its own base fields; those private fields are accessed through the base's functions. Only the additional members are listed in each derived class.
 
-An **interface** is the set of functions code can use to work with an object. The entrance uses `admit()`. The tour desk also needs `joinTour()`, which only the guided-tour class provides.
+`enterMuseum(AdmissionTicket& ticket)` is a free function, so it is not a class box. It accepts any of the three derived tickets through a base reference and calls `admit()` and `visitor()` on the original object. `priceCents()` belongs to the adult and child classes; `slot()` and `joinTour()` belong to the guided-tour class.
 
-### 2.3 How to read the examples
-
-You can compile and run the whole program in section 3.2 using C++11 or newer. Most later snippets are small additions to that program and belong inside `main()` or another function.
-
-Some snippets define smaller versions of the classes to show one rule. Treat those as separate examples: a program cannot contain two definitions of the same class.
+The entrance uses `admit()`; the tour desk additionally needs `joinTour()`. Section 3.2 is a complete C++11 program; other class sketches are separate examples.
 
 ## 3. Without inheritance vs. with inheritance
 
@@ -180,7 +183,7 @@ private:
 };
 ```
 
-Add `#include <string>` to use these class definitions. A guided-tour class written the same way would need a third copy of the name, entry flag, and `admit()` function.
+A guided-tour class without inheritance would need a third copy of the shared state and admission rule.
 
 If the admission rule changed, you would have to update all three functions. Matching function names also do not connect these classes: C++ needs an actual inheritance declaration to let an adult or child ticket be passed as an `AdmissionTicket&`.
 
@@ -188,20 +191,7 @@ If the admission rule changed, you would have to update all three functions. Mat
 
 This program puts the shared name and entry rule in `AdmissionTicket`. Each derived class keeps only what it adds.
 
-Before reading the code, these expressions explain the ticket rules:
-
-| Expression | Meaning |
-|------------|---------|
-| `bool` | A value that is either `true` or `false` |
-| `return true` | Report that the attempted entry or check-in succeeded |
-| `return false` | Report that the attempt failed |
-| `!isAdmitted()` | The visitor has not entered the museum yet |
-| `a \|\| b` | At least one of the two conditions is true |
-| `condition ? first : second` | Use `first` when the condition is true; otherwise use `second` |
-| `std::cout << value` | Print a value |
-| `'\n'` | Start a new output line |
-
-The complete program:
+Complete program:
 
 ```cpp
 #include <iostream>
@@ -216,11 +206,11 @@ public:
     }
 
     bool admit() {
-        if (admitted_) {       // This ticket has already been used to enter.
-            return false;      // Refuse another entry.
+        if (admitted_) {
+            return false;
         }
-        admitted_ = true;      // Record the first entry on this ticket.
-        return true;           // Tell the caller that entry succeeded.
+        admitted_ = true;
+        return true;
     }
 
     bool isAdmitted() const {
@@ -260,11 +250,10 @@ public:
     }
 
     bool joinTour() {
-        // Refuse check-in before museum entry or after a previous tour check-in.
         if (!isAdmitted() || joinedTour_) {
             return false;
         }
-        joinedTour_ = true; // Record that this visitor has checked into the tour.
+        joinedTour_ = true;
         return true;
     }
 
@@ -318,49 +307,71 @@ Second tour check-in: denied
 
 The adult and child prices stay the same as in earlier chapters. Different price numbers alone could be stored in one ticket class; the tour example shows a class adding something it can do.
 
-## 4. How the program works
+## 4. Object structure and behavior
 
-### 4.1 Constructor and reference syntax
+### 4.1 Admission and tour sequence
 
-| Code | Meaning |
-|------|---------|
-| `class GuidedTourTicket : public AdmissionTicket` | A guided-tour ticket is usable as an admission ticket |
-| `explicit AdmissionTicket(const std::string& visitor)` | Create an admission ticket from a name; `explicit` prevents C++ from treating a name alone as a ticket automatically |
-| `: visitor_(visitor)` | Set the stored `visitor_` field to the name passed to the constructor |
-| `: AdmissionTicket(visitor)` | Ask the base constructor to set up the ticket's name before setting up the tour fields |
-| `slot_(slot)` | Store the supplied tour time, such as `"11:00"`, in `slot_` |
-| `bool admitted_ = false` | A new ticket starts with no museum entry recorded |
-| `visitor() const` | Read the name without changing the ticket's stored fields |
-| `const std::string&` | Read the supplied string through a reference; this parameter does not copy or change that string |
-| `AdmissionTicket& ticket` | Work with the original ticket so `admit()` records entry on that ticket |
+#### Sequence diagram: which call changes which state?
 
-### 4.2 Follow Eva from the entrance to her tour
+Inherited admission functions and tour functions operate on the same `tour` object.
 
-1. `GuidedTourTicket tour("Eva", "11:00")` first constructs its base part: visitor `Eva`, admission state `false`.
-2. Its derived part stores slot `11:00` and tour check-in state `false`.
-3. Calling `joinTour()` before admission fails because the inherited `isAdmitted()` returns `false`.
-4. `enterMuseum(tour)` calls the base's `admit()`, changing the original ticket's admission state to `true`.
-5. `tour.joinTour()` now succeeds and changes its tour check-in state to `true`.
-6. A second `joinTour()` fails because that tour check-in has already happened.
+```mermaid
+sequenceDiagram
+    participant Main as main()
+    participant Entrance as enterMuseum(ticket)
+    participant Tour as tour: GuidedTourTicket
 
-### 4.3 Each ticket has its own base part
+    Note over Tour: Initial state: admitted_ = false, joinedTour_ = false
+    Main->>Tour: joinTour()
+    Tour->>Tour: isAdmitted() returns false
+    Tour-->>Main: false (entry required first)
+
+    Main->>Entrance: enterMuseum(tour)
+    Entrance->>Tour: admit() inherited from AdmissionTicket
+    Note over Tour: admitted_ becomes true
+    Tour-->>Entrance: true
+    Entrance->>Tour: visitor()
+    Tour-->>Entrance: Eva
+    Note over Entrance: Prints Eva: admitted
+
+    Main->>Tour: joinTour()
+    Tour->>Tour: isAdmitted() returns true
+    Note over Tour: joinedTour_ becomes true
+    Tour-->>Main: true (tour check-in succeeds)
+
+    Main->>Tour: joinTour() again
+    Tour-->>Main: false (already joined)
+```
+
+**Recall question:** Why can Eva enter normally even though she cannot join the tour yet? The extra requirement belongs to `joinTour()`; the inherited `admit()` rule stays the same for every ticket.
+
+### 4.2 Each ticket has its own base part
 
 Eva's tour ticket contains the fields defined by `AdmissionTicket` as well as the fields defined by `GuidedTourTicket`. The admission portion inside her object is called a **base-class subobject**.
 
 These diagrams show Maya's and Eva's tickets just after they are created, before either visitor enters:
 
-```text
-Maya's AdultTicket
-└── AdmissionTicket part: visitor = Maya, admitted = false
+```mermaid
+flowchart LR
+    subgraph MayaObject["adult: AdultTicket — one object"]
+        MayaBase["AdmissionTicket base part<br/>visitor_ = Maya<br/>admitted_ = false"]
+    end
 
-Eva's GuidedTourTicket
-├── AdmissionTicket part: visitor = Eva, admitted = false
-└── GuidedTourTicket part: slot = 11:00, joined tour = false
+    subgraph EvaObject["tour: GuidedTourTicket — another object"]
+        EvaBase["AdmissionTicket base part<br/>visitor_ = Eva<br/>admitted_ = false"]
+        EvaExtra["GuidedTourTicket added fields<br/>slot_ = 11:00<br/>joinedTour_ = false"]
+    end
+
+    AdmitMaya["adult.admit()"] -->|"changes only Maya's entry flag"| MayaBase
 ```
 
 Both tickets use the same `admit()` code, but each has its own stored name and entry flag. Changing Maya's entry flag leaves Eva's flag unchanged.
 
-### 4.4 The base interface exposes shared operations
+The boxes group fields by the class that declares them; they do not show exact byte layout in memory. Eva's base and derived parts belong to one complete object, and the private base fields still exist inside it.
+
+**Recall question:** Does inheritance share one admission flag across all tickets? No—each object contains its own base part.
+
+### 4.3 The base interface exposes shared operations
 
 A tour ticket can call the admission functions it inherits and the tour functions it adds. Code using an `AdmissionTicket&` can only ask for functions declared in the admission class:
 
@@ -468,9 +479,7 @@ The default depends on the keyword: `class` uses private inheritance when no acc
 
 ### 6.1 Order of initialization and cleanup
 
-A constructor sets up an object. A **destructor** performs cleanup when that object is destroyed; its name starts with `~`.
-
-This separate example prints a message from each constructor and destructor. Add `<iostream>` to use `std::cout`:
+Separate construction-order example (requires `<iostream>`):
 
 ```cpp
 class AdmissionTicket {
@@ -498,26 +507,18 @@ Tour part destroyed
 Admission part destroyed
 ```
 
-The admission part is ready before the tour constructor runs. When execution leaves the braces, C++ cleans up the tour part first and the admission part last.
-
 The full setup order is: construct the base, initialize the derived class's fields in the order they are declared, then run the derived constructor's body. Cleanup happens in the reverse order.
 
 The full ticket program has an admission constructor that requires a visitor name. If the tour constructor omits `: AdmissionTicket(visitor)`, C++ tries to create the base without a name by calling `AdmissionTicket()`. No such constructor exists in that program, so the code fails to compile.
 
-The list after a constructor's colon is called its **initializer list**. `AdmissionTicket(visitor)` in that list lets the base constructor set up its own private fields.
-
 ### 6.2 Deleting through a base pointer
 
-In the full program, `tour` is created inside `main()`. When `main()` ends, C++ automatically destroys that guided-tour object, including its admission part.
-
-A **pointer**, written with `*`, stores the address of an object. An `AdmissionTicket*` can point to a guided-tour object. If you create that object with `new` and later destroy it with `delete` through the base pointer, the base needs a **virtual destructor** [6].
-
-`virtual` tells C++ to start cleanup with the actual object type, so the tour part is cleaned up too. This separate example shows the required base destructor:
+Deleting a derived object through an `AdmissionTicket*` requires a virtual base destructor [6].
 
 ```cpp
 class AdmissionTicket {
 public:
-    virtual ~AdmissionTicket() = default; // Use C++'s generated cleanup function.
+    virtual ~AdmissionTicket() = default;
 };
 
 class GuidedTourTicket : public AdmissionTicket {};
@@ -527,7 +528,7 @@ AdmissionTicket* ticket = new GuidedTourTicket;
 delete ticket; // Safe with the virtual base destructor.
 ```
 
-Without `virtual` on the base destructor, that `delete` has **undefined behavior**: C++ does not promise correct cleanup or any other predictable result.
+Without a virtual base destructor, this deletion has undefined behavior.
 
 The [Polymorphism](05_Polymorphism.md) note adds this destructor and introduces smart pointers, which automatically delete the objects they own.
 
@@ -627,6 +628,29 @@ std::cout << view.isAdmitted(); // 1: view observes the original ticket.
 
 `copy` is a new, plain admission ticket. `view` is a reference to the original tour ticket, so it sees the original ticket's updated entry flag.
 
+#### Object diagram: a base copy versus a base reference
+
+This shows the state **after `original.admit()`** in the code above. The copy was created before that call.
+
+```mermaid
+flowchart LR
+    View["view: const AdmissionTicket&amp;<br/>a reference to original"]
+
+    subgraph OriginalObject["original: GuidedTourTicket"]
+        OriginalBase["AdmissionTicket base part<br/>visitor_ = Eva<br/>admitted_ = true"]
+        OriginalExtra["GuidedTourTicket added fields<br/>slot_ = 11:00<br/>joinedTour_ = false"]
+    end
+
+    subgraph CopyObject["copy: AdmissionTicket — separate object"]
+        CopyBase["Copied base fields only<br/>visitor_ = Eva<br/>admitted_ = false"]
+    end
+
+    View -->|"refers to the original through its base interface"| OriginalBase
+    OriginalBase -.->|"copied earlier, when admitted_ was false"| CopyBase
+```
+
+**Recall question:** Which name observes the original's new entry state? `view` does. `copy` has independent state and no tour fields. The reference keeps the original object intact, but its base type exposes only admission functions.
+
 `view.slot()` still fails because `view` has the type `const AdmissionTicket&`, and `AdmissionTicket` has no `slot()` function. The tour time still exists in the original object; you can read it with `original.slot()`.
 
 A parameter without `&` receives its own copy. A parameter with `&` refers to the object you passed:
@@ -675,7 +699,7 @@ std::cout << tour.label() << '\n';   // Guided-tour ticket
 std::cout << ticket.label() << '\n'; // Admission ticket
 ```
 
-Add `<iostream>` and `<string>`, and put the last four lines inside `main()`. The call using `tour` returns the tour label. The call using the admission reference returns the admission label, even though it refers to the same tour object.
+Separate example using `<iostream>` and `<string>`. Both names refer to the same object, but the non-virtual call uses the static type.
 
 This is called **function hiding**: the derived class defines its own function with the same name, but a call through the base still uses the non-virtual base function.
 

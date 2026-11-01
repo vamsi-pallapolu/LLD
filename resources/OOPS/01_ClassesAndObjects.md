@@ -4,11 +4,7 @@
 
 **An object is one actual instance of a class.** Maya's ticket and Leo's ticket are two objects created from the same `AdmissionTicket` class. Each stores its own name and price.
 
-C++ also calls values such as an `int` objects. This chapter focuses on objects created from classes.
-
-All five notes use one example: **museum admission tickets**. Maya's adult ticket costs 1500 cents, Leo's child ticket costs 800 cents, and later Nora's senior ticket costs 1000 cents. Prices use whole cents: 1500 cents means 15 dollars. Storing these amounts as integers avoids rounding caused by decimal floating-point numbers. We assume the ticket category was chosen correctly at purchase; these examples do not check ages or take payments.
-
-We develop the design in stages. Each complete program stands on its own; snippets labeled as additions belong in that chapter's program.
+All five notes use **museum admission tickets**: Maya (1500 cents), Leo (800 cents), and later Nora (1000 cents). Integer cents avoid floating-point rounding. Each complete program is independent and assumes the ticket category was chosen correctly at purchase.
 
 | Note | What the ticket example teaches |
 |------|---------------------------------|
@@ -17,7 +13,6 @@ We develop the design in stages. Each complete program stands on its own; snippe
 | [Abstraction](03_Abstraction.md) | Print a receipt using a ticket's public operations |
 | [Inheritance](04_Inheritance.md) | Share admission rules across ticket kinds and add guided-tour check-in |
 | [Polymorphism](05_Polymorphism.md) | Let one receipt function get each ticket kind's own price |
-
 
 ## Contents
 
@@ -31,15 +26,12 @@ We develop the design in stages. Each complete program stands on its own; snippe
 8. [Common mistakes](#8-common-mistakes)
 9. [Before writing a class](#9-before-writing-a-class)
 10. [Check your understanding](#10-check-your-understanding)
-11. [Short recap](#11-short-recap)
+
+For quick visual revision: [class design](#class-diagram-the-ticket-description) → [separate instances](#object-diagram-one-class-two-tickets) → [copies and references](#object-diagram-copy-versus-reference).
 
 ## 1. Think of a ticket template
 
-A museum uses one ticket template with spaces for a visitor's name and a price. It can issue many tickets using that template.
-
-The template is like a **class**. Each issued ticket is like an **object**.
-
-Maya's and Leo's tickets have the same fields, but their values are separate. Changing Maya's ticket does not change Leo's.
+One ticket class defines the fields and operations; each issued ticket has its own values.
 
 ## 2. Why do we need classes?
 
@@ -79,13 +71,7 @@ That check cannot catch every mistake: 1500 is a valid price even if you meant t
 
 ## 3. A complete example with a class
 
-This program creates two tickets and prints their details. It requires C++11 or newer.
-
-Before reading it, know that `public:` lists functions callers may use, and `private:` lists fields callers cannot read or change directly. `std::string` stores text, `int` stores a whole number, and `std::cout` prints output.
-
-`const std::string&` reads the supplied text through a reference without changing it; the constructor then stores its own copy. A reference is another name for an existing value. The trailing `const` on a getter means that function does not change the ticket's fields.
-
-`throw std::invalid_argument(...)` reports an invalid price as an error. That error stops ticket creation or the requested price change. Section 3 explains how this works.
+C++11 or newer. The constructor and setter enforce a nonnegative price.
 
 ```cpp
 #include <iostream>
@@ -97,13 +83,13 @@ public:
     AdmissionTicket(const std::string& visitor, int priceCents)
         : visitor_(visitor), priceCents_(priceCents) {
         if (priceCents_ < 0) {
-            throw std::invalid_argument("Price must not be negative"); // Reject this starting price.
+            throw std::invalid_argument("Price must not be negative");
         }
     }
 
     void setPriceCents(int priceCents) {
         if (priceCents < 0) {
-            throw std::invalid_argument("Price must not be negative"); // Leave the old price unchanged.
+            throw std::invalid_argument("Price must not be negative");
         }
         priceCents_ = priceCents;
     }
@@ -137,59 +123,28 @@ Maya: 1500 cents
 Leo: 800 cents
 ```
 
-### 3.1 Read the class from the inside out
+### Class diagram: the ticket description
 
-Each ticket stores two values:
+`+` means public, `-` means private; `string` represents `std::string`.
 
-| Name | Meaning |
-|------|---------|
-| `visitor_` | The visitor's name |
-| `priceCents_` | The ticket's price in whole cents |
-
-**Data members** are variables stored inside an object. Maya's ticket has its own `visitor_` and `priceCents_`; Leo's ticket has a separate pair.
-
-These fields are called **non-static** because each object has its own values. A field declared `static` would instead be shared by the class. We do not use static fields here. The trailing `_` is a naming choice, not a C++ requirement.
-
-**Member functions**, also called **methods**, are functions that belong to a class and work with its objects. `visitor()` returns the name, `priceCents()` returns the price, and `setPriceCents()` checks and changes the price.
-
-A function that reads a stored value is often called a **getter**. A function that sets a stored value is often called a **setter**.
-
-### 3.2 How a ticket is created
-
-```cpp
-AdmissionTicket adult("Maya", 1500);
+```mermaid
+classDiagram
+    class AdmissionTicket {
+        -string visitor_
+        -int priceCents_
+        +AdmissionTicket(string visitor, int priceCents)
+        +setPriceCents(int priceCents) void
+        +visitor() string
+        +priceCents() int
+    }
+    note for AdmissionTicket "Constructor and setter reject negative prices. Each object stores its own fields."
 ```
 
-Read this as: create an `AdmissionTicket` object named `adult`, for Maya, with a price of 1500 cents. At this stage, `adult` and `child` are variable names, not different C++ types.
+**Recall question:** Does this class box represent Maya's ticket? It describes the type; Maya's ticket is one object created from it.
 
-**A constructor sets up a newly created object.** It has the same name as the class and no return type. Here, `AdmissionTicket(...)` receives the visitor name and starting price.
+### 3.1 State and construction
 
-The part after the constructor's colon is its **initializer list**. `visitor_(visitor)` stores the supplied name, and `priceCents_(priceCents)` stores the supplied price before the code inside the braces runs.
-
-If the price is negative, `throw std::invalid_argument(...)` reports an error and stops creation of the ticket. This kind of error is an **exception**. If the program does not handle it, the program stops. Zero is allowed for a free ticket.
-
-### 3.3 What happens when we use the ticket?
-
-1. `AdmissionTicket adult("Maya", 1500)` creates Maya's ticket.
-2. `AdmissionTicket child("Leo", 800)` creates Leo's separate ticket.
-3. `adult.visitor()` returns Maya's name.
-4. `adult.priceCents()` returns 1500.
-5. The same functions on `child` return Leo's name and 800.
-
-The dot in `adult.priceCents()` means **call this function on this object**. It returns 1500; it does not print that number. The surrounding `std::cout` line prints the returned value. `\n` starts the next output line.
-
-### 3.4 What do the other keywords mean?
-
-| Code | Plain meaning |
-|------|---------------|
-| `public:` | Code outside the class can use these functions |
-| `private:` | Outside code cannot directly access these stored values |
-| `void setPriceCents(...)` | Change the price without returning a result |
-| `int priceCents() const` | Return a whole number without changing the ticket |
-| `std::string` | The C++ type used here to store text |
-| `const std::string& visitor` | Receive the caller's text without copying or changing it; the constructor then copies it into `visitor_` |
-
-Choosing which data outside code can change is covered in [Encapsulation](02_Encapsulation.md).
+Non-static fields belong to each object; `static` fields are shared by the class. The initializer list initializes fields before the constructor body runs. A negative starting price throws, so no completed ticket is created; zero is valid.
 
 ## 4. One class, separate objects
 
@@ -199,6 +154,22 @@ Choosing which data outside code can change is covered in [Encapsulation](02_Enc
 |--------|---------|-------|
 | `adult` | Maya | 1500 cents |
 | `child` | Leo | 800 cents |
+
+### Object diagram: one class, two tickets
+
+The arrows mean “create an instance of”; they are not inheritance arrows. Both objects have the same C++ type.
+
+```mermaid
+flowchart TB
+    Template["AdmissionTicket<br/>one class definition"]
+    Template -->|"construct adult"| Adult["adult: AdmissionTicket<br/>visitor_ = Maya<br/>priceCents_ = 1500"]
+    Template -->|"construct child"| Child["child: AdmissionTicket<br/>visitor_ = Leo<br/>priceCents_ = 800"]
+    Change["adult.setPriceCents(0)"] -->|"updates this object only"| Adult
+```
+
+The boxes show the initial values. After the shown setter call, Maya's price becomes zero and Leo's remains 800.
+
+**Recall question:** Are `adult` and `child` different classes here? No—they are names of separate `AdmissionTicket` objects.
 
 Adding another ticket takes one line:
 
@@ -210,7 +181,7 @@ You do not need to write another `visitor()` or `priceCents()` function.
 
 ## 5. Copies and references
 
-The snippets below use the class from section 3. Put object creation and printing lines inside `main()`. Put the `makeFree()` function definition before `main()`. Each experiment starts with a fresh ticket.
+The following snippets use the class from section 3. Each experiment starts with a fresh ticket.
 
 For this class, copying a ticket creates a separate object with the same starting values:
 
@@ -246,39 +217,39 @@ A **reference**, written with `&`, is another name for an existing object. Now `
 
 Use `const AdmissionTicket&` when a function should read the existing ticket without changing it or making a copy.
 
+### Object diagram: copy versus reference
+
+These are two separate experiments, each starting with `original` priced at 1500 cents. The diagram shows the results after the indicated change.
+
+```mermaid
+flowchart TB
+    subgraph ByValue["Copy experiment"]
+        OriginalA["original<br/>priceCents_ = 1500"]
+        CopyA["copy<br/>priceCents_ = 1000"]
+        OriginalA -.->|"copy = original; then copy.setPriceCents(1000)"| CopyA
+    end
+    subgraph ByReference["Reference experiment"]
+        Parameter["ticket: AdmissionTicket&amp;<br/>parameter of makeFree"]
+        OriginalB["original<br/>priceCents_ = 0"]
+        Parameter -->|"another name for this object; setPriceCents(0)"| OriginalB
+    end
+```
+
+**Recall question:** Which experiment changes the caller's ticket? The reference experiment; the value experiment changes a separate copy.
+
 ## 6. When does an object go away?
 
-A local object such as `adult` in `main()` is cleaned up when execution leaves the block where it was created.
-
-**A destructor cleans up an object when it goes away.** Its name is the class name with `~` in front: `~AdmissionTicket()`.
-
-C++ generates the destructor we need here, including cleanup of the stored string. In [Polymorphism](05_Polymorphism.md), we add `virtual` to the destructor so cleanup also works when a derived ticket is deleted through a base pointer.
+Local objects are destroyed when execution leaves their scope. The compiler-generated destructor is sufficient for this class and cleans up its stored string.
 
 ### 6.1 References do not keep an object alive
 
-A function receiving `const AdmissionTicket&` uses the caller's existing ticket. That parameter does not create or delete the ticket, and it does not extend the ticket's lifetime.
-
-For example, `makeFree(original)` uses a reference while `original` still exists. If code saves that reference and uses it after `original` has gone away, the reference no longer points to a live object.
-
-That is called a **dangling reference**. Using it has **undefined behavior**, meaning C++ promises no predictable result. A reference gives access to an object; it does not keep the object alive.
+A reference parameter does not own the ticket or extend its lifetime. Using a saved reference after the ticket is destroyed is undefined behavior: the reference is dangling.
 
 ## 7. The key intents
 
-### 7.1 Keep data and the actions on it together
-
-A ticket's price and the checked operation that changes it live in one place.
-
-### 7.2 Make a new type that reads like the problem
-
-`AdmissionTicket adult(...)` and `adult.priceCents()` describe museum tickets directly.
-
-### 7.3 Create many objects from one description
-
-Write the rules once. Every ticket follows them, and each keeps its own values.
-
-### 7.4 Start every object in a valid state
-
-The constructor initializes the name and price, and rejects negative prices.
+- Group related state and operations in a meaningful type.
+- Reuse one class definition while keeping object state separate.
+- Establish valid state during construction and preserve it during updates.
 
 ## 8. Common mistakes
 
@@ -351,10 +322,6 @@ It initializes the visitor and price, and rejects a negative price.
 It receives a copy. Use `AdmissionTicket&` to change the original.
 
 </details>
-
-## 11. Short recap
-
-Write the ticket's data and functions once in `AdmissionTicket`. Create separate objects for Maya and Leo. The constructor gives each ticket its starting values; a destructor handles cleanup when the ticket goes away.
 
 ## Sources and further reading
 
