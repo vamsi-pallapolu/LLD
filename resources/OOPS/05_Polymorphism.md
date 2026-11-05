@@ -221,7 +221,7 @@ sequenceDiagram
     participant Child as child: ChildTicket
 
     Main->>Receipt: printReceipt(adult)
-    Note over Receipt,Adult: Static parameter type: const AdmissionTicket&; actual object: AdultTicket
+    Note over Receipt,Adult: Static parameter type: const AdmissionTicket&<br/>Actual object: AdultTicket
     Receipt->>Adult: visitor() uses AdmissionTicket's implementation
     Adult-->>Receipt: Maya
     Receipt->>Adult: virtual priceCents() dispatches to AdultTicket
@@ -229,7 +229,7 @@ sequenceDiagram
     Note over Receipt: Prints Maya: 1500 cents
 
     Main->>Receipt: printReceipt(child)
-    Note over Receipt,Child: Static parameter type: const AdmissionTicket&; actual object: ChildTicket
+    Note over Receipt,Child: Static parameter type: const AdmissionTicket&<br/>Actual object: ChildTicket
     Receipt->>Child: visitor() uses AdmissionTicket's implementation
     Child-->>Receipt: Leo
     Receipt->>Child: virtual priceCents() dispatches to ChildTicket
