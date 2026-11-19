@@ -9,8 +9,8 @@ private:
 
 public:
     BankAccount(double accountNumer, const std::string &ownerName) : _accountNumber{accountNumer},
-                                                                  _ownerName{ownerName},
-                                                                  _balance{0} {}
+                                                                     _ownerName{ownerName},
+                                                                     _balance{0} {}
 
     void deposit(double amount)
     {
@@ -22,7 +22,7 @@ public:
 
     bool withdraw(double amount)
     {
-        if ((_balance > 0 ) && (_balance - amount) >= 0)
+        if ((_balance > 0) && (_balance - amount) >= 0)
         {
             _balance -= amount;
             return true;

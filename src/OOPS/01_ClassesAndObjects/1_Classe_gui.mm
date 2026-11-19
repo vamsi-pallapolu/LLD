@@ -3,12 +3,12 @@
 //
 // Build:
 //   clang++ -std=c++17 -fobjc-arc -framework Cocoa \
-//     OOPS/viz/visualizer.mm OOPS/ClassesAndObjects/1_Classe_gui.mm \
+//     src/oops/00_viz/visualizer.mm src/oops/01_ClassesAndObjects/1_Classe_gui.mm \
 //     -o derived/1_Classe_gui
 // Run: ./derived/1_Classe_gui
 
 #include "Car.h"
-#include "../viz/visualizer.h"
+#include "../00_viz/visualizer.h"
 
 // Generic adapter: describe any Car as a Snapshot. Reusable for any Car instance.
 static viz::Snapshot describe(Car &c) {
